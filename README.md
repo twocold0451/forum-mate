@@ -1,53 +1,48 @@
-# 2libra-enhance (2libra 论坛增强插件)
+# ForumMate (论坛增强助手)
 
-这是一个为 [2libra.com](https://2libra.com/) 论坛开发的浏览器辅助工具
+ForumMate 是一个面向论坛场景的浏览器辅助工具。当前已支持 [2libra.com](https://2libra.com/) 与 [v2ex.com](https://v2ex.com/)，后续会继续扩展更多论坛。
 
-主要功能：
-1.  **快速预览 (Quick View)**：在帖子列表页，鼠标悬停时显示“快速查看”按钮，点击即可弹窗阅读帖子内容并直接回复，无需跳转页面。
-2.  **纯净模式**：弹窗自动过滤掉侧边栏、页眉页脚等干扰元素，提供沉浸式阅读体验。
-3.  **智能返回顶部**：全新的悬浮返回顶部按钮，智能吸附在内容区右侧。
+## 📥 安装方式
 
-## 📥 快速开始
-
-### 方式一：油猴脚本 (Tampermonkey)
-#### 一键安装
+### 油猴脚本一键安装
 1. 点击 [GreasyFork一键安装](https://greasyfork.org/en/scripts/562089)
-2. 点击 "安装此脚本"
-3. 脚本会自动在Tampermonkey中打开，点击保存
+2. 点击“安装此脚本”
+3. 脚本会自动在 Tampermonkey 中打开，点击保存
 
-#### GitHub 直接安装
-1.  **安装扩展**：确保你的浏览器已安装 [Tampermonkey](https://www.tampermonkey.net/) 扩展 (Chrome / Edge / Firefox)。
-2.  **安装脚本**：
-    *   点击 [2libra-enhance-tampermonkey.user.js](https://raw.githubusercontent.com/twocold0451/2libra-enhance/main/2libra-enhance-tampermonkey.user.js) 链接。
-    *   Tampermonkey 会自动识别并提示安装，点击“安装”即可。
-3.  **开始使用**：刷新 2libra.com 页面即可生效。
+### GitHub 直接安装
+1. **安装扩展**：确保你的浏览器已安装 [Tampermonkey](https://www.tampermonkey.net/) 扩展。
+2. **安装脚本**：
+   * 点击 [forummate-tampermonkey.user.js](https://raw.githubusercontent.com/twocold0451/forum-mate/main/forummate-tampermonkey.user.js) 链接。
+   * Tampermonkey 会自动识别并提示安装，点击“安装”即可。
+3. **开始使用**：刷新已支持的论坛页面即可生效。
 
-## Chrome / Edge 浏览器扩展不再同步更新，请优先使用油猴脚本方式。
-### 方式二：Chrome / Edge 开发者模式 (本地加载)
+## 🌐 支持的网站
 
-1.  **下载源码**：下载本项目代码到本地文件夹。
-2.  **打开扩展管理**：
-    *   Chrome: 输入 `chrome://extensions`
-    *   Edge: 输入 `edge://extensions`
-3.  **开启开发者模式**：打开右上角的“开发者模式”开关。
-4.  **加载扩展**：点击左上角的“加载已解压的扩展程序”，选择本项目文件夹。
-5.  **开始使用**：刷新 2libra.com 页面即可生效。
+### 2libra.com
+- 状态：已支持
+- 地址：[https://2libra.com/](https://2libra.com/)
+- 当前能力：帖子快速预览、纯净模式、智能返回顶部、Tampermonkey 菜单设置入口、通知快速查看
 
-## ✨ 功能特性详情
+#### 功能说明
+- **快速预览 (Quick View)**：在帖子列表页，鼠标悬停时显示“快速查看”按钮，点击即可弹窗阅读帖子内容并直接回复，无需跳转页面。
+- **纯净模式**：弹窗自动过滤掉侧边栏、页眉页脚等干扰元素，提供沉浸式阅读体验。
+- **智能返回顶部**：全新的悬浮返回顶部按钮，智能吸附在内容区右侧。
+- **站内设置弹框**：通过 Tampermonkey 原生菜单直接打开站内设置弹框并修改脚本开关。
 
-### ⚡ 快速查看 (Quick View)
-*   **触发方式**：鼠标悬停在帖子列表的任一行，按钮会自动出现在“最后回复时间”的右侧。
-*   **无缝阅读**：点击按钮弹出全屏模态框，直接加载帖子详情。
+### v2ex.com
+- 状态：已支持（首批）
+- 地址：[https://v2ex.com/](https://v2ex.com/)
+- 当前能力：点击帖子标题快速查看、按频道与标题关键字屏蔽帖子、Tampermonkey 菜单设置入口
 
-### 🚀 智能返回顶部
-*   **自适应布局**：按钮会自动计算位置，始终紧贴内容列表的右侧边缘（支持列表页和详情页）。
+#### 功能说明
+- **点击帖子标题快速查看**：识别 `/t/数字` 形式的主题链接，点击后直接用弹窗预览主题内容。
+- **频道屏蔽**：可按频道中文名或英文 slug 屏蔽帖子，支持多个频道。
+- **频道/标题独立屏蔽**：`屏蔽频道` 与 `标题关键字` 都可单独生效，不再要求必须同时填写。
+- **规则关系可选**：当两项都填写时，可在设置里选择 `and` 或 `or` 关系决定命中方式。
+- **站内设置弹框**：在 `v2ex.com` 分组下独立控制快速预览，以及“屏蔽指定频道帖子”的子规则配置。
 
-## 🛠️ 开发说明
-
-*   **manifest.json**: 浏览器扩展的配置文件 (Manifest V3)。
-*   **content.js**: 浏览器扩展的核心逻辑代码。
-*   **2libra-enhance-tampermonkey.user.js**: Tampermonkey 油猴脚本，逻辑与 content.js 保持同步。
+- **forummate-tampermonkey.user.js**: Tampermonkey 油猴脚本主文件。
 
 ---
-Author: [twocold0451](https://github.com/twocold0451)  
+Author: [twocold0451](https://github.com/twocold0451)
 License: MIT
