@@ -43,6 +43,12 @@ ForumMate 是一个面向论坛场景的浏览器辅助工具。当前已支持 
 
 - **forummate-tampermonkey.user.js**: Tampermonkey 油猴脚本主文件。
 
+## 赞赏支持
+
+如果 ForumMate 对你有帮助，欢迎扫码支持继续更新。
+
+![微信赞赏码](wx_appreciation_code.jpg)
+
 ---
 Author: [twocold0451](https://github.com/twocold0451)
 License: MIT

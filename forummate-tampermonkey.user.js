@@ -26,7 +26,9 @@
         modalId: 'forummate-quick-view-modal',
         iframeId: 'forummate-quick-view-iframe',
         settingsModalId: 'forummate-settings-modal',
-        settingsButtonId: 'forummate-settings-button'
+        settingsButtonId: 'forummate-settings-button',
+        feedbackUrl: 'https://github.com/twocold0451/forum-mate/discussions/1',
+        appreciationUrl: 'https://github.com/twocold0451/forum-mate#赞赏支持'
     };
 
     // Settings state
@@ -728,27 +730,36 @@
         }
         #${CONFIG.settingsModalId} .settings-footer {
             border-top: 1px solid rgba(0, 0, 0, 0.08);
-            justify-content: flex-end;
+            justify-content: space-between;
+        }
+        #${CONFIG.settingsModalId} .settings-footer-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
         }
 
-        #${CONFIG.settingsModalId} .btn-reset-settings,
+        #${CONFIG.settingsModalId} .btn-appreciation-settings,
+        #${CONFIG.settingsModalId} .btn-feedback-settings,
         #${CONFIG.settingsModalId} .btn-close-settings {
             border: none;
-            border-radius: 10px;
-            padding: 8px 14px;
-            font-size: 13px;
+            border-radius: 9px;
+            padding: 6px 12px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
         }
 
-        #${CONFIG.settingsModalId} .btn-reset-settings {
-            background: #eef2ff;
-            color: var(--color-primary, #4a00ff);
+        #${CONFIG.settingsModalId} .btn-appreciation-settings,
+        #${CONFIG.settingsModalId} .btn-feedback-settings {
+            background: rgba(17, 24, 39, 0.06);
+            color: #111827;
         }
 
-        #${CONFIG.settingsModalId} .btn-reset-settings:hover {
-            background: #e0e7ff;
+        #${CONFIG.settingsModalId} .btn-appreciation-settings:hover,
+        #${CONFIG.settingsModalId} .btn-feedback-settings:hover {
+            background: rgba(17, 24, 39, 0.12);
         }
 
         #${CONFIG.settingsModalId} .btn-close-settings {
@@ -1745,7 +1756,10 @@
                     </section>
                 </div>
                 <div class="settings-footer">
-                    <button class="btn-reset-settings" type="button">恢复默认</button>
+                    <div class="settings-footer-actions">
+                        <button class="btn-feedback-settings" type="button">反馈</button>
+                        <button class="btn-appreciation-settings" type="button">赞赏</button>
+                    </div>
                 </div>
             </div>
         `;
@@ -1757,12 +1771,11 @@
         });
 
         modal.querySelector('.btn-close-settings').addEventListener('click', closeSettingsModal);
-        modal.querySelector('.btn-reset-settings').addEventListener('click', () => {
-            Object.entries(DEFAULT_SETTINGS).forEach(([key, value]) => {
-                updateSetting(key, value, { silent: true });
-            });
-            showToast('✅ 已恢复默认设置', 'success');
-            syncSettingsModalState();
+        modal.querySelector('.btn-feedback-settings').addEventListener('click', () => {
+            window.open(CONFIG.feedbackUrl, '_blank', 'noopener,noreferrer');
+        });
+        modal.querySelector('.btn-appreciation-settings').addEventListener('click', () => {
+            window.open(CONFIG.appreciationUrl, '_blank', 'noopener,noreferrer');
         });
 
         modal.querySelectorAll('[data-setting]').forEach(control => {
