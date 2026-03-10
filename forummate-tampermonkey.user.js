@@ -34,48 +34,175 @@
 
     // Settings state
     let Settings;
+    const SITE_CONFIGS = Object.freeze({
+        '2libra': Object.freeze({
+            key: '2libra',
+            displayName: '2libra',
+            domains: Object.freeze(['2libra.com']),
+            family: '2libra-like',
+            settings: Object.freeze({
+                titleQuickView: 'clickTitleQuickView',
+                backToTop: 'showBackToTopButton'
+            }),
+            features: Object.freeze({
+                skipInitInEmbeddedFrame: true,
+                lazyListItemProcessing: true,
+                listQuickButtonEnabled: true,
+                previewHidePromotions: true,
+                previewUse2LibraLikeScrollMode: true,
+                notificationsQuickView: true,
+                v2exTopicFilter: false,
+                backToTopUseTallestCardFallback: true
+            }),
+            selectors: Object.freeze({
+                backToTopAnchors: Object.freeze(['[data-main-left="true"]', 'main .flex-1', '.flex-1'])
+            }),
+            urlRules: Object.freeze({}),
+            defaults: Object.freeze({
+                backToTopEnabled: true
+            }),
+            styles: Object.freeze({
+                transparentBgFallback: ''
+            })
+        }),
+        'middlefun': Object.freeze({
+            key: 'middlefun',
+            displayName: 'middlefun',
+            domains: Object.freeze(['middlefun.com']),
+            family: '2libra-like',
+            settings: Object.freeze({
+                titleQuickView: 'middlefunClickTitleQuickView',
+                backToTop: 'middlefunShowBackToTopButton'
+            }),
+            features: Object.freeze({
+                skipInitInEmbeddedFrame: true,
+                lazyListItemProcessing: true,
+                listQuickButtonEnabled: false,
+                previewHidePromotions: true,
+                previewUse2LibraLikeScrollMode: true,
+                notificationsQuickView: false,
+                v2exTopicFilter: false,
+                backToTopUseTallestCardFallback: false
+            }),
+            selectors: Object.freeze({
+                backToTopAnchors: Object.freeze(['div.lg\\:col-span-7.pb-12', '.lg\\:col-span-7.pb-12'])
+            }),
+            urlRules: Object.freeze({
+                previewPathPattern: /^\/posts\/[^/]+\/[^/]+$/i,
+                postPathPattern: /^\/posts\/[^/]+\/[^/]+$/i
+            }),
+            defaults: Object.freeze({
+                backToTopEnabled: true
+            }),
+            styles: Object.freeze({
+                transparentBgFallback: ''
+            })
+        }),
+        'v2ex': Object.freeze({
+            key: 'v2ex',
+            displayName: 'V2EX',
+            domains: Object.freeze(['v2ex.com']),
+            family: 'v2ex',
+            settings: Object.freeze({
+                titleQuickView: 'v2exClickTitleQuickView',
+                backToTop: 'v2exShowBackToTopButton'
+            }),
+            features: Object.freeze({
+                skipInitInEmbeddedFrame: false,
+                lazyListItemProcessing: false,
+                listQuickButtonEnabled: false,
+                previewHidePromotions: false,
+                previewUse2LibraLikeScrollMode: false,
+                notificationsQuickView: false,
+                v2exTopicFilter: true,
+                backToTopUseTallestCardFallback: false
+            }),
+            selectors: Object.freeze({
+                backToTopAnchors: Object.freeze(['#Main .box', 'div.box', '.box'])
+            }),
+            urlRules: Object.freeze({
+                previewPathPattern: /^\/t\/\d+$/,
+                topicPathPattern: /^\/t\/\d+$/
+            }),
+            defaults: Object.freeze({
+                backToTopEnabled: true
+            }),
+            styles: Object.freeze({
+                transparentBgFallback: '#f5f5f5'
+            })
+        })
+    });
+    const SITE_CONFIG_LIST = Object.freeze(Object.values(SITE_CONFIGS));
+    const DEFAULT_SITE_KEY = '2libra';
 
     function isDomainOrSubdomain(hostname, domain) {
         return hostname === domain || hostname.endsWith(`.${domain}`);
     }
 
-    function is2LibraSite(hostname = window.location.hostname) {
-        return isDomainOrSubdomain(hostname, '2libra.com');
+    function getSiteConfigByKey(siteKey) {
+        return SITE_CONFIGS[siteKey] || null;
     }
 
-    function isMiddlefunSite(hostname = window.location.hostname) {
-        return isDomainOrSubdomain(hostname, 'middlefun.com');
+    function getSiteConfigByHostname(hostname = window.location.hostname) {
+        return SITE_CONFIG_LIST.find(siteConfig => {
+            return siteConfig.domains.some(domain => isDomainOrSubdomain(hostname, domain));
+        }) || null;
     }
 
-    function is2LibraLikeSite(hostname = window.location.hostname) {
-        return is2LibraSite(hostname) || isMiddlefunSite(hostname);
-    }
-
-    function isV2exSite(hostname = window.location.hostname) {
-        return isDomainOrSubdomain(hostname, 'v2ex.com');
+    function getCurrentSiteConfig(hostname = window.location.hostname) {
+        return getSiteConfigByHostname(hostname);
     }
 
     function getCurrentSiteKey(hostname = window.location.hostname) {
-        if (isV2exSite(hostname)) return 'v2ex';
-        if (isMiddlefunSite(hostname)) return 'middlefun';
-        if (is2LibraSite(hostname)) return '2libra';
-        return 'unknown';
+        const currentSiteConfig = getCurrentSiteConfig(hostname);
+        return currentSiteConfig ? currentSiteConfig.key : 'unknown';
+    }
+    function isCurrentSiteFeatureEnabled(featureKey) {
+        const currentSiteConfig = getCurrentSiteConfig() || getSiteConfigByKey(DEFAULT_SITE_KEY);
+        return Boolean(currentSiteConfig && currentSiteConfig.features && currentSiteConfig.features[featureKey]);
     }
 
+    function getSiteConfigFromUrl(url = window.location.href) {
+        try {
+            const parsedUrl = new URL(url, window.location.href);
+            return getSiteConfigByHostname(parsedUrl.hostname);
+        } catch (error) {
+            return getCurrentSiteConfig();
+        }
+    }
+
+    function getSiteKeyFromUrl(url = window.location.href) {
+        const siteConfig = getSiteConfigFromUrl(url);
+        return siteConfig ? siteConfig.key : 'unknown';
+    }
+
+    function isUrlMatchedBySiteRule(url, siteKey, ruleKey) {
+        try {
+            const parsedUrl = new URL(url, window.location.href);
+            const siteConfig = getSiteConfigByKey(siteKey);
+            if (!siteConfig || !siteConfig.domains.some(domain => isDomainOrSubdomain(parsedUrl.hostname, domain))) {
+                return false;
+            }
+
+            const pattern = siteConfig.urlRules ? siteConfig.urlRules[ruleKey] : null;
+            if (!(pattern instanceof RegExp)) {
+                return true;
+            }
+
+            return pattern.test(parsedUrl.pathname);
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function getTitleQuickViewSettingKeyForUrl(url, fallbackKey = 'clickTitleQuickView') {
+        const siteConfig = getSiteConfigFromUrl(url);
+        return siteConfig && siteConfig.settings ? siteConfig.settings.titleQuickView : fallbackKey;
+    }
     const FORUMMATE_SITE_CLASS = 'forummate-site-' + getCurrentSiteKey();
     document.documentElement.classList.add(FORUMMATE_SITE_CLASS);
 
     const TOP_BUTTON_HORIZONTAL_OFFSET = 12;
-    const BACK_TO_TOP_SETTING_KEY_BY_SITE = {
-        '2libra': 'showBackToTopButton',
-        'middlefun': 'middlefunShowBackToTopButton',
-        'v2ex': 'v2exShowBackToTopButton'
-    };
-    const BACK_TO_TOP_SETTING_DEFAULTS = {
-        showBackToTopButton: true,
-        middlefunShowBackToTopButton: true,
-        v2exShowBackToTopButton: true
-    };
 
     function isEmbeddedFrame() {
         try {
@@ -86,26 +213,38 @@
     }
 
     // 2libra-like quick preview uses a same-origin iframe; skip re-initializing inside it.
-    if (is2LibraLikeSite() && isEmbeddedFrame()) {
-        console.log('ForumMate Script: Skip initialization inside 2libra-like preview iframe.');
+    if (isCurrentSiteFeatureEnabled('skipInitInEmbeddedFrame') && isEmbeddedFrame()) {
+        console.log('ForumMate Script: Skip initialization inside embedded preview iframe.');
         return;
     }
+
     function isV2exTopicUrl(url) {
-        try {
-            const parsedUrl = new URL(url, window.location.href);
-            return isV2exSite(parsedUrl.hostname) && /^\/t\/\d+$/.test(parsedUrl.pathname);
-        } catch (error) {
-            return false;
-        }
+        return isUrlMatchedBySiteRule(url, 'v2ex', 'topicPathPattern');
     }
 
     function isMiddlefunPostUrl(url) {
+        return isUrlMatchedBySiteRule(url, 'middlefun', 'postPathPattern');
+    }
+
+    function resolveQuickPreviewSiteKey(url = window.location.href) {
         try {
             const parsedUrl = new URL(url, window.location.href);
-            return isMiddlefunSite(parsedUrl.hostname) && /^\/posts\/[^/]+\/[^/]+$/i.test(parsedUrl.pathname);
+            const siteConfig = getSiteConfigByHostname(parsedUrl.hostname);
+            if (!siteConfig) return '2libra';
+
+            const previewPattern = siteConfig.urlRules ? siteConfig.urlRules.previewPathPattern : null;
+            if (previewPattern instanceof RegExp && !previewPattern.test(parsedUrl.pathname)) {
+                return '2libra';
+            }
+
+            return siteConfig.key;
         } catch (error) {
-            return false;
+            return '2libra';
         }
+    }
+
+    function isTransparentColor(colorValue) {
+        return !colorValue || colorValue === 'rgba(0, 0, 0, 0)' || colorValue === 'transparent';
     }
 
     // Inject shared styles
@@ -1042,17 +1181,22 @@
         const modal = document.getElementById(CONFIG.modalId);
 
         // Resolve page background dynamically to avoid transparent modal issues
-        const isV2exPreview = isV2exTopicUrl(url);
-        const isMiddlefunPreview = isMiddlefunPostUrl(url);
+        const previewSiteKey = resolveQuickPreviewSiteKey(url);
+        const previewSiteConfig = getSiteConfigByKey(previewSiteKey) || getSiteConfigByKey('2libra');
         let bg = window.getComputedStyle(document.body).backgroundColor;
-        if (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') {
+        if (isTransparentColor(bg)) {
             bg = window.getComputedStyle(document.documentElement).backgroundColor;
         }
-        if (isV2exPreview && (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent' || !bg)) {
-            bg = '#f5f5f5';
+
+        const transparentBgFallback = previewSiteConfig && previewSiteConfig.styles
+            ? previewSiteConfig.styles.transparentBgFallback
+            : '';
+        if (transparentBgFallback && isTransparentColor(bg)) {
+            bg = transparentBgFallback;
         }
+
         modal.style.setProperty('--forummate-dynamic-bg', bg);
-        modal.dataset.forummateSite = isV2exPreview ? 'v2ex' : (isMiddlefunPreview ? 'middlefun' : '2libra');
+        modal.dataset.forummateSite = previewSiteKey;
 
         const iframe = document.getElementById(CONFIG.iframeId);
         const titleEl = modal.querySelector('.modal-title');
@@ -1092,7 +1236,7 @@
                 style.textContent = css;
                 doc.head.appendChild(style);
 
-                if (!isV2exPreview) {
+                if (previewSiteConfig && previewSiteConfig.features && previewSiteConfig.features.previewHidePromotions) {
                     const hidePreviewPromoCards = () => {
                         doc.querySelectorAll('img[src*="/promotion/"]').forEach(image => {
                             const promoCard = image.closest('.card.card-border.cursor-pointer') || image.closest('[role="link"][tabindex="0"]')?.closest('.card.card-border');
@@ -1109,7 +1253,7 @@
                     previewPromoObserver.observe(doc.body, { childList: true, subtree: true });
                 }
 
-                if (!isV2exPreview) {
+                if (previewSiteConfig && previewSiteConfig.features && previewSiteConfig.features.previewUse2LibraLikeScrollMode) {
                     apply2LibraLikePreviewScrollMode(doc);
                 }
 
@@ -1239,14 +1383,14 @@
     }
 
     function getQuickPreviewFrameCss(url, bg) {
-        if (isV2exTopicUrl(url)) {
-            return getV2exQuickPreviewFrameCss(bg);
-        }
-        if (isMiddlefunPostUrl(url)) {
-            return getMiddlefunQuickPreviewFrameCss(bg);
-        }
-
-        return get2LibraQuickPreviewFrameCss(bg);
+        const previewSiteKey = resolveQuickPreviewSiteKey(url);
+        const cssBuilderBySiteKey = {
+            '2libra': get2LibraQuickPreviewFrameCss,
+            'middlefun': getMiddlefunQuickPreviewFrameCss,
+            'v2ex': getV2exQuickPreviewFrameCss
+        };
+        const cssBuilder = cssBuilderBySiteKey[previewSiteKey] || cssBuilderBySiteKey['2libra'];
+        return cssBuilder(bg);
     }
 
     function get2LibraNotificationsFrameCss(bg) {
@@ -1265,9 +1409,8 @@
     function updateTitleLinkStyle(titleLink, settingKey = 'clickTitleQuickView') {
         if (!titleLink) return;
 
-        const isMiddlefunLink = isMiddlefunUrl(titleLink.href);
-        const middlefunSettingKey = 'middlefunClickTitleQuickView';
-        const isEnabled = isMiddlefunLink ? Boolean(Settings[middlefunSettingKey]) : Boolean(Settings[settingKey]);
+        const resolvedSettingKey = getTitleQuickViewSettingKeyForUrl(titleLink.href, settingKey);
+        const isEnabled = Boolean(Settings[resolvedSettingKey]);
 
         if (isEnabled) {
             titleLink.classList.add('forummate-title-link-quick-view');
@@ -1276,8 +1419,7 @@
             if (!titleLink.dataset.forummateClickAdded) {
                 titleLink.dataset.forummateClickAdded = 'true';
                 titleLink.addEventListener('click', (e) => {
-                    if (isMiddlefunLink && !Settings[middlefunSettingKey]) return;
-                    if (!isMiddlefunLink && !Settings[settingKey]) return;
+                    if (!Settings[resolvedSettingKey]) return;
                     if (e.ctrlKey || e.metaKey) return;
 
                     e.preventDefault();
@@ -1294,38 +1436,34 @@
     }
 
     // 主逻辑：尝试为单个 LI 元素添加按钮
-
-    function isMiddlefunUrl(url = window.location.href) {
-        try {
-            const parsedUrl = new URL(url, window.location.href);
-            return isMiddlefunSite(parsedUrl.hostname);
-        } catch (error) {
-            return isMiddlefunSite();
+function removeListItemQuickButton(li) {
+        const existingBtn = li ? li.querySelector('.forummate-quick-btn') : null;
+        if (existingBtn) {
+            existingBtn.remove();
         }
     }
 
     // Main list-item processing entry
     function processListItem(li) {
-        // middlefun: always click title for quick preview, never show quick button
-        if (isMiddlefunSite()) {
-            const existingBtn = li ? li.querySelector('.forummate-quick-btn') : null;
-            if (existingBtn) {
-                existingBtn.remove();
-            }
+        if (!li) return;
+
+        const currentSiteConfig = getCurrentSiteConfig();
+        const supportsQuickButton = Boolean(currentSiteConfig && currentSiteConfig.features && currentSiteConfig.features.listQuickButtonEnabled);
+        if (!supportsQuickButton) {
+            removeListItemQuickButton(li);
             return;
         }
+
+        const quickViewSettingKey = currentSiteConfig && currentSiteConfig.settings
+            ? currentSiteConfig.settings.titleQuickView
+            : 'clickTitleQuickView';
 
         // Skip button injection when click-to-preview is enabled
-        if (Settings.clickTitleQuickView){
+        if (Boolean(Settings[quickViewSettingKey])) {
             // Remove any existing quick-view button to keep the UI consistent
-            const existingBtn = li.querySelector('.forummate-quick-btn');
-            if (existingBtn) {
-                existingBtn.remove();
-            }
+            removeListItemQuickButton(li);
             return;
         }
-
-        if (!li) return;
 
         // Find the timestamp element in the current row
         const timeEl = li.querySelector('time');
@@ -1390,7 +1528,7 @@
 
     // Strategy 1: lazy processing on mouseover
     document.body.addEventListener('mouseover', (e) => {
-        if (!is2LibraLikeSite()) return;
+        if (!isCurrentSiteFeatureEnabled('lazyListItemProcessing')) return;
 
         const li = e.target.closest('li');
         if (li) {
@@ -1399,16 +1537,32 @@
     }, { passive: true });
 
     // --- Back-to-top button logic ---
+    const BACK_TO_TOP_LABEL_BY_SETTING_KEY = SITE_CONFIG_LIST.reduce((labelBySettingKey, siteConfig) => {
+        const settingKey = siteConfig.settings ? siteConfig.settings.backToTop : '';
+        if (settingKey) {
+            labelBySettingKey[settingKey] = `${siteConfig.displayName} 返回顶部按钮`;
+        }
+        return labelBySettingKey;
+    }, {});
+
+    function getCurrentBackToTopSettingKey() {
+        const currentSiteConfig = getCurrentSiteConfig() || getSiteConfigByKey(DEFAULT_SITE_KEY);
+        return currentSiteConfig && currentSiteConfig.settings ? currentSiteConfig.settings.backToTop : '';
+    }
 
     function isBackToTopButtonEnabledForCurrentSite() {
-        const settingKey = BACK_TO_TOP_SETTING_KEY_BY_SITE[getCurrentSiteKey()];
+        const settingKey = getCurrentBackToTopSettingKey();
         if (!settingKey) return false;
 
         if (Settings && typeof Settings[settingKey] === 'boolean') {
             return Settings[settingKey];
         }
 
-        return Boolean(GM_getValue(settingKey, BACK_TO_TOP_SETTING_DEFAULTS[settingKey]));
+        const currentSiteConfig = getCurrentSiteConfig() || getSiteConfigByKey(DEFAULT_SITE_KEY);
+        const defaultValue = currentSiteConfig && currentSiteConfig.defaults
+            ? Boolean(currentSiteConfig.defaults.backToTopEnabled)
+            : true;
+        return Boolean(GM_getValue(settingKey, defaultValue));
     }
 
     // 1. Create the button and mount it once
@@ -1432,25 +1586,84 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
+    function queryFirstVisibleElement(selectors = []) {
+        for (const selector of selectors) {
+            const element = document.querySelector(selector);
+            if (element) {
+                return element;
+            }
+        }
+        return null;
+    }
+
+    function getTallestCardElement() {
+        const cardCandidates = Array.from(document.querySelectorAll('ul.card'));
+        if (!cardCandidates.length) {
+            return null;
+        }
+        return cardCandidates.reduce((maxCard, currentCard) => {
+            return currentCard.getBoundingClientRect().height > maxCard.getBoundingClientRect().height
+                ? currentCard
+                : maxCard;
+        });
+    }
+    function isScrollableElement(element) {
+        if (!element || element === document.body || element === document.documentElement) {
+            return false;
+        }
+
+        const computedStyle = window.getComputedStyle(element);
+        const overflowY = computedStyle ? computedStyle.overflowY : '';
+        const supportsScroll = overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
+        return supportsScroll && element.scrollHeight > element.clientHeight;
+    }
+
+    function getScrollableAncestorScrollTop(element) {
+        let currentElement = element;
+        while (currentElement && currentElement !== document.body && currentElement !== document.documentElement) {
+            if (isScrollableElement(currentElement) && typeof currentElement.scrollTop === 'number') {
+                return currentElement.scrollTop;
+            }
+            currentElement = currentElement.parentElement;
+        }
+        return 0;
+    }
+
+    function getCurrentPageScrollTop(anchorElement) {
+        const baseScrollTop = Math.max(
+            window.scrollY || 0,
+            document.documentElement ? document.documentElement.scrollTop : 0,
+            document.body ? document.body.scrollTop : 0,
+            document.scrollingElement ? document.scrollingElement.scrollTop : 0,
+            lastScrollSource && typeof lastScrollSource.scrollTop === 'number' ? lastScrollSource.scrollTop : 0
+        );
+
+        const anchorScrollTop = anchorElement && typeof anchorElement.scrollTop === 'number'
+            ? anchorElement.scrollTop
+            : 0;
+        const anchorAncestorScrollTop = getScrollableAncestorScrollTop(anchorElement);
+
+        return Math.max(baseScrollTop, anchorScrollTop, anchorAncestorScrollTop);
+    }
+
     // 3. Keep the button positioned and visible when needed
     function getTopButtonAnchorElement() {
-        if (isMiddlefunSite()) {
-            return document.querySelector('div.lg\\:col-span-7.pb-12') || document.querySelector('.lg\\:col-span-7.pb-12');
-        }
-        if (isV2exSite()) {
-            return document.querySelector('#Main .box') || document.querySelector('div.box') || document.querySelector('.box');
-        }
-        const primaryColumn = document.querySelector('[data-main-left="true"]') || document.querySelector('main .flex-1') || document.querySelector('.flex-1');
-        if (primaryColumn) return primaryColumn;
+        const currentSiteConfig = getCurrentSiteConfig() || getSiteConfigByKey(DEFAULT_SITE_KEY);
+        const anchorSelectors = currentSiteConfig && currentSiteConfig.selectors
+            ? currentSiteConfig.selectors.backToTopAnchors
+            : [];
 
-        const cardCandidates = Array.from(document.querySelectorAll('ul.card'));
-        if (cardCandidates.length > 0) {
-            const tallestCard = cardCandidates.reduce((maxCard, currentCard) => {
-                return currentCard.getBoundingClientRect().height > maxCard.getBoundingClientRect().height
-                    ? currentCard
-                    : maxCard;
-            });
-            return tallestCard;
+        const primaryAnchor = queryFirstVisibleElement(anchorSelectors);
+        if (primaryAnchor) return primaryAnchor;
+
+        const allowTallestCardFallback = Boolean(
+            currentSiteConfig
+            && currentSiteConfig.features
+            && currentSiteConfig.features.backToTopUseTallestCardFallback
+        );
+
+        if (allowTallestCardFallback) {
+            return getTallestCardElement();
         }
 
         return null;
@@ -1463,13 +1676,7 @@
         }
 
         const anchorElement = getTopButtonAnchorElement();
-        const pageScrollTop = Math.max(
-            window.scrollY || 0,
-            document.documentElement ? document.documentElement.scrollTop : 0,
-            document.body ? document.body.scrollTop : 0,
-            document.scrollingElement ? document.scrollingElement.scrollTop : 0,
-            lastScrollSource && typeof lastScrollSource.scrollTop === 'number' ? lastScrollSource.scrollTop : 0
-        );
+        const pageScrollTop = getCurrentPageScrollTop(anchorElement);
         const isScrolledDown = pageScrollTop > 100;
 
         if (!isScrolledDown) {
@@ -1490,11 +1697,14 @@
         // Prefer anchoring to the content column when there is enough room.
         if (anchorElement) {
             const anchorRect = anchorElement.getBoundingClientRect();
+            const isAnchorUsable = anchorRect.width > 0 && anchorRect.height > 0;
             const requiredWidth = anchorRect.width + 60;
             const hasEnoughSpace = window.innerWidth >= requiredWidth;
 
-            if (hasEnoughSpace) {
-                topButton.style.left = `${anchorRect.right + TOP_BUTTON_HORIZONTAL_OFFSET}px`;
+            if (isAnchorUsable && hasEnoughSpace) {
+                const maxLeft = Math.max(16, window.innerWidth - topButton.offsetWidth - 16);
+                const desiredLeft = anchorRect.right + TOP_BUTTON_HORIZONTAL_OFFSET;
+                topButton.style.left = `${Math.max(16, Math.min(desiredLeft, maxLeft))}px`;
                 topButton.style.right = 'auto';
 
                 const desiredBottomOffset = 24;
@@ -1541,6 +1751,10 @@
     window.addEventListener('scroll', throttledUpdater);
     document.addEventListener('scroll', throttledUpdater, true);
     window.addEventListener('resize', throttledUpdater);
+    window.addEventListener('wheel', throttledUpdater, { passive: true });
+    window.addEventListener('touchmove', throttledUpdater, { passive: true });
+    document.addEventListener('keydown', throttledUpdater);
+    setInterval(throttledUpdater, 800);
     setTimeout(refreshBackToTopButtonState, 500);
 
     // --- Loading animations ---
@@ -1834,12 +2048,7 @@
     }
     function handleBackToTopButtonSettingChange(key, enabled, options = {}) {
         if (!options.silent) {
-            const settingLabelByKey = {
-                showBackToTopButton: '2libra 返回顶部按钮',
-                middlefunShowBackToTopButton: 'middlefun 返回顶部按钮',
-                v2exShowBackToTopButton: 'V2EX 返回顶部按钮'
-            };
-            const settingLabel = settingLabelByKey[key] || '返回顶部按钮';
+            const settingLabel = BACK_TO_TOP_LABEL_BY_SETTING_KEY[key] || '返回顶部按钮';
             const message = enabled ? `✅ 已启用：${settingLabel}` : `⬜ 已禁用：${settingLabel}`;
             showToast(message, enabled ? 'success' : 'info');
         }
@@ -1854,6 +2063,30 @@
         syncSettingsModalState();
     }
 
+    const SETTING_CHANGE_HANDLERS = (() => {
+        const handlers = {
+            clickTitleQuickView: handleClickTitleQuickViewChange,
+            middlefunClickTitleQuickView: handleMiddlefunClickTitleQuickViewChange,
+            showQuickViewToast: handleShowQuickViewToastChange,
+            v2exClickTitleQuickView: handleV2exClickTitleQuickViewChange,
+            v2exChannelFilterEnabled: (_value, options = {}) => handleV2exSettingsChange(options),
+            v2exBlockedChannels: (_value, options = {}) => handleV2exSettingsChange(options),
+            v2exTitleKeywords: (_value, options = {}) => handleV2exSettingsChange(options),
+            v2exFilterRelation: (_value, options = {}) => handleV2exSettingsChange(options)
+        };
+
+        SITE_CONFIG_LIST.forEach(siteConfig => {
+            const backToTopSettingKey = siteConfig.settings ? siteConfig.settings.backToTop : '';
+            if (backToTopSettingKey) {
+                handlers[backToTopSettingKey] = (enabled, options = {}) => {
+                    handleBackToTopButtonSettingChange(backToTopSettingKey, enabled, options);
+                };
+            }
+        });
+
+        return Object.freeze(handlers);
+    })();
+
     function updateSetting(key, value, options = {}) {
         const normalizedValue = normalizeSettingValue(key, value);
         const currentValue = normalizeSettingValue(key, GM_getValue(key, DEFAULT_SETTINGS[key]));
@@ -1865,18 +2098,9 @@
 
         GM_setValue(key, normalizedValue);
 
-        if (key === 'clickTitleQuickView') {
-            handleClickTitleQuickViewChange(normalizedValue, options);
-        } else if (key === 'middlefunClickTitleQuickView') {
-            handleMiddlefunClickTitleQuickViewChange(normalizedValue, options);
-        } else if (key === 'showQuickViewToast') {
-            handleShowQuickViewToastChange(normalizedValue, options);
-        } else if (key === 'v2exClickTitleQuickView') {
-            handleV2exClickTitleQuickViewChange(normalizedValue, options);
-        } else if (key === 'showBackToTopButton' || key === 'middlefunShowBackToTopButton' || key === 'v2exShowBackToTopButton') {
-            handleBackToTopButtonSettingChange(key, normalizedValue, options);
-        } else if (key === 'v2exChannelFilterEnabled' || key === 'v2exBlockedChannels' || key === 'v2exTitleKeywords' || key === 'v2exFilterRelation') {
-            handleV2exSettingsChange(options);
+        const changeHandler = SETTING_CHANGE_HANDLERS[key];
+        if (typeof changeHandler === 'function') {
+            changeHandler(normalizedValue, options);
         }
     }
 
@@ -2203,18 +2427,22 @@
     function openSettingsModal() {
         createSettingsModal();
         const modal = document.getElementById(CONFIG.settingsModalId);
-        const isV2exSettings = isV2exSite();
+        const currentSiteConfig = getCurrentSiteConfig() || getSiteConfigByKey('2libra');
 
         let bg = window.getComputedStyle(document.body).backgroundColor;
-        if (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') {
+        if (isTransparentColor(bg)) {
             bg = window.getComputedStyle(document.documentElement).backgroundColor;
         }
-        if (isV2exSettings && (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent' || !bg)) {
-            bg = '#f5f5f5';
+
+        const transparentBgFallback = currentSiteConfig && currentSiteConfig.styles
+            ? currentSiteConfig.styles.transparentBgFallback
+            : '';
+        if (transparentBgFallback && isTransparentColor(bg)) {
+            bg = transparentBgFallback;
         }
 
         modal.style.setProperty('--forummate-dynamic-bg', bg);
-        modal.dataset.forummateSite = isV2exSettings ? 'v2ex' : '2libra';
+        modal.dataset.forummateSite = currentSiteConfig ? currentSiteConfig.key : '2libra';
         resetSettingsGroupsForCurrentSite(modal);
         syncSettingsModalState();
         modal.classList.add('active');
@@ -2275,7 +2503,7 @@
 
         postFlatLinks.forEach(postLink => {
             if (postLink.classList.contains('join-item')) return;
-            updateTitleLinkStyle(postLink, 'clickTitleQuickView');
+            updateTitleLinkStyle(postLink);
         });
     }
 
@@ -2296,7 +2524,7 @@
         return tokens;
     }
     function shouldHideV2exTopic(topicLink) {
-        if (!isV2exSite() || !Settings.v2exChannelFilterEnabled) return false;
+        if (!isCurrentSiteFeatureEnabled('v2exTopicFilter') || !Settings.v2exChannelFilterEnabled) return false;
         const topicCell = getV2exTopicCell(topicLink);
         if (!topicCell) return false;
         const blockedChannels = parseFilterValues(Settings.v2exBlockedChannels);
@@ -2331,17 +2559,18 @@
         const topicLinks = document.querySelectorAll('.item_title a[href^="/t/"], .item_title a[href^="https://v2ex.com/t/"], .item_title a[href^="https://www.v2ex.com/t/"], a.topic-link[href^="/t/"], a.topic-link[href^="https://v2ex.com/t/"], a.topic-link[href^="https://www.v2ex.com/t/"]');
         topicLinks.forEach(topicLink => {
             if (!isV2exTopicUrl(topicLink.href)) return;
-            updateTitleLinkStyle(topicLink, 'v2exClickTitleQuickView');
+            updateTitleLinkStyle(topicLink);
             applyV2exTopicVisibility(topicLink);
         });
     }
     function processAllPostItems() {
-        if (isV2exSite()) {
-            processV2exTopicLinks();
-            return;
-        }
-
-        process2LibraPostItems();
+        const processorBySiteKey = {
+            '2libra': process2LibraPostItems,
+            'middlefun': process2LibraPostItems,
+            'v2ex': processV2exTopicLinks
+        };
+        const processor = processorBySiteKey[getCurrentSiteKey()] || process2LibraPostItems;
+        processor();
     }
 
 
@@ -2375,7 +2604,7 @@
     }
 
     function initializeNotificationQuickView() {
-        if (!is2LibraSite()) return;
+        if (!isCurrentSiteFeatureEnabled('notificationsQuickView')) return;
 
         // Initial pass
         updateNotificationLinkState();
@@ -2402,6 +2631,32 @@
     postListObserver.observe(document.body, { childList: true, subtree: true });
 
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
