@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         ForumMate 论坛增强助手
 // @namespace    http://tampermonkey.net/
-// @version      1.8.0
+// @version      1.8.1
 // @description  ForumMate 论坛增强助手：当前支持 2libra.com、v2ex.com 的帖子快速查看与筛选
 // @author       twocold0451
 // @homepage     https://github.com/twocold0451/forum-mate
 // @supportURL   https://github.com/twocold0451/forum-mate/issues
-// @match        https://2libra.com/*
-// @match        https://v2ex.com/*
+// @match        https://*.2libra.com/*
+// @match        https://*.v2ex.com/*
 // @license MIT
 // @grant        GM_registerMenuCommand
 // @grant        GM_getValue
@@ -34,12 +34,16 @@
     // Settings state
     let Settings;
 
+    function isDomainOrSubdomain(hostname, domain) {
+        return hostname === domain || hostname.endsWith(`.${domain}`);
+    }
+
     function is2LibraSite(hostname = window.location.hostname) {
-        return hostname === '2libra.com';
+        return isDomainOrSubdomain(hostname, '2libra.com');
     }
 
     function isV2exSite(hostname = window.location.hostname) {
-        return hostname === 'v2ex.com';
+        return isDomainOrSubdomain(hostname, 'v2ex.com');
     }
 
     function isEmbeddedFrame() {
@@ -1875,7 +1879,7 @@
         return topicCell || null;
     }
     function getV2exChannelTokens(topicCell) {
-        const channelLink = topicCell ? topicCell.querySelector('a[href^="/go/"], a[href^="https://v2ex.com/go/"]') : null;
+        const channelLink = topicCell ? topicCell.querySelector('a[href^="/go/"], a[href^="https://v2ex.com/go/"], a[href^="https://www.v2ex.com/go/"]') : null;
         if (!channelLink) return [];
         const href = channelLink.getAttribute('href') || '';
         const match = href.match(/\/go\/([^/?#]+)/i);
@@ -1919,7 +1923,7 @@
         topicCell.style.display = shouldHideV2exTopic(topicLink) ? 'none' : '';
     }
     function processV2exTopicLinks() {
-        const topicLinks = document.querySelectorAll('.item_title a[href^="/t/"], .item_title a[href^="https://v2ex.com/t/"], a.topic-link[href^="/t/"], a.topic-link[href^="https://v2ex.com/t/"]');
+        const topicLinks = document.querySelectorAll('.item_title a[href^="/t/"], .item_title a[href^="https://v2ex.com/t/"], .item_title a[href^="https://www.v2ex.com/t/"], a.topic-link[href^="/t/"], a.topic-link[href^="https://v2ex.com/t/"], a.topic-link[href^="https://www.v2ex.com/t/"]');
         topicLinks.forEach(topicLink => {
             if (!isV2exTopicUrl(topicLink.href)) return;
             updateTitleLinkStyle(topicLink, 'v2exClickTitleQuickView');
@@ -1993,7 +1997,6 @@
     postListObserver.observe(document.body, { childList: true, subtree: true });
 
 })();
-
 
 
 
