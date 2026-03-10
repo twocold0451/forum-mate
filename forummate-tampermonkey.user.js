@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         ForumMate 论坛增强助手
 // @namespace    http://tampermonkey.net/
-// @version      1.8.1
-// @description  ForumMate 论坛增强助手：当前支持 2libra.com、v2ex.com 的帖子快速查看与筛选
+// @version      1.8.2
+// @description  ForumMate 论坛增强助手：当前支持 2libra.com、middlefun.com、v2ex.com 的帖子快速查看与筛选
 // @author       twocold0451
 // @homepage     https://github.com/twocold0451/forum-mate
 // @supportURL   https://github.com/twocold0451/forum-mate/issues
 // @match        https://*.2libra.com/*
+// @match        https://*.middlefun.com/*
 // @match        https://*.v2ex.com/*
 // @license MIT
 // @grant        GM_registerMenuCommand
@@ -42,9 +43,31 @@
         return isDomainOrSubdomain(hostname, '2libra.com');
     }
 
+    function isMiddlefunSite(hostname = window.location.hostname) {
+        return isDomainOrSubdomain(hostname, 'middlefun.com');
+    }
+
+    function is2LibraLikeSite(hostname = window.location.hostname) {
+        return is2LibraSite(hostname) || isMiddlefunSite(hostname);
+    }
+
     function isV2exSite(hostname = window.location.hostname) {
         return isDomainOrSubdomain(hostname, 'v2ex.com');
     }
+
+    function getCurrentSiteKey(hostname = window.location.hostname) {
+        if (isV2exSite(hostname)) return 'v2ex';
+        if (isMiddlefunSite(hostname)) return 'middlefun';
+        if (is2LibraSite(hostname)) return '2libra';
+        return 'unknown';
+    }
+
+    const FORUMMATE_SITE_CLASS = 'forummate-site-' + getCurrentSiteKey();
+    document.documentElement.classList.add(FORUMMATE_SITE_CLASS);
+
+    const TOP_BUTTON_LAYOUT_BY_SITE_CLASS = {
+        'forummate-site-middlefun': 'fixed-bottom-right'
+    };
 
     function isEmbeddedFrame() {
         try {
@@ -54,15 +77,24 @@
         }
     }
 
-    // 2libra quick preview uses a same-origin iframe; skip re-initializing inside it.
-    if (is2LibraSite() && isEmbeddedFrame()) {
-        console.log('ForumMate Script: Skip initialization inside 2libra preview iframe.');
+    // 2libra-like quick preview uses a same-origin iframe; skip re-initializing inside it.
+    if (is2LibraLikeSite() && isEmbeddedFrame()) {
+        console.log('ForumMate Script: Skip initialization inside 2libra-like preview iframe.');
         return;
     }
     function isV2exTopicUrl(url) {
         try {
             const parsedUrl = new URL(url, window.location.href);
             return isV2exSite(parsedUrl.hostname) && /^\/t\/\d+$/.test(parsedUrl.pathname);
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function isMiddlefunPostUrl(url) {
+        try {
+            const parsedUrl = new URL(url, window.location.href);
+            return isMiddlefunSite(parsedUrl.hostname) && /^\/posts\/[^/]+\/[^/]+$/i.test(parsedUrl.pathname);
         } catch (error) {
             return false;
         }
@@ -374,6 +406,16 @@
         #${CONFIG.modalId}[data-forummate-site="v2ex"] .modal-content,
         #${CONFIG.modalId}[data-forummate-site="v2ex"] .modal-header {
             background: var(--forummate-dynamic-bg, #fff);
+        }
+        #${CONFIG.modalId}[data-forummate-site="middlefun"] .btn-go-thread,
+        #${CONFIG.modalId}[data-forummate-site="v2ex"] .btn-go-thread {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+        #${CONFIG.modalId}[data-forummate-site="middlefun"] .btn-go-thread:hover,
+        #${CONFIG.modalId}[data-forummate-site="v2ex"] .btn-go-thread:hover {
+            background-color: #d1d5db;
+            opacity: 1;
         }
         #${CONFIG.modalId} .modal-title {
             font-weight: bold;
@@ -907,12 +949,31 @@
         document.body.appendChild(modal);
     }
 
+    function apply2LibraLikePreviewScrollMode(doc) {
+        if (!doc) return;
+
+        const mainContent = doc.querySelector('[data-main-left="true"]');
+        if (mainContent) {
+            doc.documentElement.style.setProperty('overflow', 'hidden', 'important');
+            doc.body.style.setProperty('overflow', 'hidden', 'important');
+            mainContent.style.setProperty('overflow-y', 'auto', 'important');
+            mainContent.style.setProperty('overflow-x', 'hidden', 'important');
+            return;
+        }
+
+        // Fallback for compatible sites without [data-main-left="true"] (e.g. middlefun)
+        doc.documentElement.style.setProperty('overflow-y', 'auto', 'important');
+        doc.documentElement.style.setProperty('overflow-x', 'hidden', 'important');
+        doc.body.style.setProperty('overflow-y', 'auto', 'important');
+        doc.body.style.setProperty('overflow-x', 'hidden', 'important');
+    }
     function openModal(url, title) {
         createModal();
         const modal = document.getElementById(CONFIG.modalId);
 
         // Resolve page background dynamically to avoid transparent modal issues
         const isV2exPreview = isV2exTopicUrl(url);
+        const isMiddlefunPreview = isMiddlefunPostUrl(url);
         let bg = window.getComputedStyle(document.body).backgroundColor;
         if (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') {
             bg = window.getComputedStyle(document.documentElement).backgroundColor;
@@ -921,7 +982,7 @@
             bg = '#f5f5f5';
         }
         modal.style.setProperty('--forummate-dynamic-bg', bg);
-        modal.dataset.forummateSite = isV2exPreview ? 'v2ex' : '2libra';
+        modal.dataset.forummateSite = isV2exPreview ? 'v2ex' : (isMiddlefunPreview ? 'middlefun' : '2libra');
 
         const iframe = document.getElementById(CONFIG.iframeId);
         const titleEl = modal.querySelector('.modal-title');
@@ -976,6 +1037,10 @@
                         hidePreviewPromoCards();
                     });
                     previewPromoObserver.observe(doc.body, { childList: true, subtree: true });
+                }
+
+                if (!isV2exPreview) {
+                    apply2LibraLikePreviewScrollMode(doc);
                 }
 
                 // Reset scroll position inside the preview frame
@@ -1046,6 +1111,23 @@
         `;
     }
 
+    function getMiddlefunQuickPreviewFrameCss(bg) {
+        return `
+            ${get2LibraQuickPreviewFrameCss(bg)}
+            div.lg\\:col-span-3.mt-6.pb-12,
+            .lg\\:col-span-3.mt-6.pb-12,
+            [class*="lg:col-span-3"][class*="mt-6"][class*="pb-12"] {
+                display: none !important;
+            }
+            footer,
+            footer.footer-center,
+            .footer-horizontal,
+            [role="contentinfo"] {
+                display: none !important;
+            }
+        `;
+    }
+
     function getV2exQuickPreviewFrameCss(bg) {
         return `
             #Top, #Bottom, #Rightbar, .dock_area { display: none !important; }
@@ -1090,6 +1172,9 @@
         if (isV2exTopicUrl(url)) {
             return getV2exQuickPreviewFrameCss(bg);
         }
+        if (isMiddlefunPostUrl(url)) {
+            return getMiddlefunQuickPreviewFrameCss(bg);
+        }
 
         return get2LibraQuickPreviewFrameCss(bg);
     }
@@ -1110,14 +1195,19 @@
     function updateTitleLinkStyle(titleLink, settingKey = 'clickTitleQuickView') {
         if (!titleLink) return;
 
-        if (Settings[settingKey]) {
+        const isMiddlefunLink = isMiddlefunUrl(titleLink.href);
+        const middlefunSettingKey = 'middlefunClickTitleQuickView';
+        const isEnabled = isMiddlefunLink ? Boolean(Settings[middlefunSettingKey]) : Boolean(Settings[settingKey]);
+
+        if (isEnabled) {
             titleLink.classList.add('forummate-title-link-quick-view');
             titleLink.title = '点击快速查看';
 
             if (!titleLink.dataset.forummateClickAdded) {
                 titleLink.dataset.forummateClickAdded = 'true';
                 titleLink.addEventListener('click', (e) => {
-                    if (!Settings[settingKey]) return;
+                    if (isMiddlefunLink && !Settings[middlefunSettingKey]) return;
+                    if (!isMiddlefunLink && !Settings[settingKey]) return;
                     if (e.ctrlKey || e.metaKey) return;
 
                     e.preventDefault();
@@ -1135,8 +1225,25 @@
 
     // 主逻辑：尝试为单个 LI 元素添加按钮
 
+    function isMiddlefunUrl(url = window.location.href) {
+        try {
+            const parsedUrl = new URL(url, window.location.href);
+            return isMiddlefunSite(parsedUrl.hostname);
+        } catch (error) {
+            return isMiddlefunSite();
+        }
+    }
+
     // Main list-item processing entry
     function processListItem(li) {
+        // middlefun: always click title for quick preview, never show quick button
+        if (isMiddlefunSite()) {
+            const existingBtn = li ? li.querySelector('.forummate-quick-btn') : null;
+            if (existingBtn) {
+                existingBtn.remove();
+            }
+            return;
+        }
 
         // Skip button injection when click-to-preview is enabled
         if (Settings.clickTitleQuickView){
@@ -1185,7 +1292,7 @@
             };
             // Append the button next to the metadata row
             metaRow.parentElement.appendChild(btn);
-            
+
             li.dataset.forummateQuickBtnAdded = 'true';
         }
 
@@ -1205,7 +1312,7 @@
         // Align the button to the right edge of the metadata content
         const leftPos = metaRow.offsetLeft + contentRightEdge + 8;
         btn.style.left = `${leftPos}px`;
-        
+
         // Vertically center the button against the metadata row
         const topPos = metaRow.offsetTop + (metaRow.offsetHeight / 2);
         btn.style.top = `${topPos}px`;
@@ -1213,7 +1320,7 @@
 
     // Strategy 1: lazy processing on mouseover
     document.body.addEventListener('mouseover', (e) => {
-        if (!is2LibraSite()) return;
+        if (!is2LibraLikeSite()) return;
 
         const li = e.target.closest('li');
         if (li) {
@@ -1242,47 +1349,66 @@
     // 3. Keep the button positioned and visible when needed
     function updateTopButtonPosition() {
         const card = document.querySelector('ul.card') || document.querySelector('[data-main-left="true"]') || document.querySelector('.flex-1');
-        
-        if (!card) {
-            topButton.classList.remove('visible');
-            setTimeout(() => { 
-                if(!topButton.classList.contains('visible')) topButton.style.display = 'none'; 
-            }, 300);
-            return;
-        }
+        const pageScrollTop = Math.max(
+            window.scrollY || 0,
+            document.documentElement ? document.documentElement.scrollTop : 0,
+            document.body ? document.body.scrollTop : 0
+        );
+        const isScrolledDown = pageScrollTop > 100;
 
-        const cardRect = card.getBoundingClientRect();
-        const requiredWidth = cardRect.width + 60; 
-        const hasEnoughSpace = window.innerWidth >= requiredWidth;
-        const isScrolledDown = window.scrollY > 100;
-
-        if (!hasEnoughSpace || !isScrolledDown) {
+        if (!isScrolledDown) {
             if (topButton.classList.contains('visible')) {
                 topButton.classList.remove('visible');
-                setTimeout(() => { 
-                    if(!topButton.classList.contains('visible')) topButton.style.display = 'none'; 
+                setTimeout(() => {
+                    if (!topButton.classList.contains('visible')) topButton.style.display = 'none';
                 }, 300);
             }
             return;
         }
-        
+
         topButton.style.display = 'flex';
         requestAnimationFrame(() => {
-             topButton.classList.add('visible');
+            topButton.classList.add('visible');
         });
 
-        topButton.style.left = `${cardRect.right + 16}px`;
-        topButton.style.right = 'auto';
-        
-        const desiredBottomOffset = 24; 
-        const buttonHeight = topButton.offsetHeight;
-        const fixedPos = window.innerHeight - buttonHeight - desiredBottomOffset;
-        const stickyPos = cardRect.bottom - buttonHeight;
+        const topButtonLayout = TOP_BUTTON_LAYOUT_BY_SITE_CLASS[FORUMMATE_SITE_CLASS] || 'anchored';
 
-        topButton.style.top = `${Math.min(fixedPos, stickyPos)}px`;
-        topButton.style.bottom = 'auto';
+        // Site-specific fallback using class-based layout strategy.
+        if (topButtonLayout === 'fixed-bottom-right') {
+            topButton.style.left = 'auto';
+            topButton.style.right = '24px';
+            topButton.style.top = 'auto';
+            topButton.style.bottom = '24px';
+            return;
+        }
+
+        // Prefer anchoring to the content column when there is enough room.
+        if (card) {
+            const cardRect = card.getBoundingClientRect();
+            const requiredWidth = cardRect.width + 60;
+            const hasEnoughSpace = window.innerWidth >= requiredWidth;
+
+            if (hasEnoughSpace) {
+                topButton.style.left = `${cardRect.right + 16}px`;
+                topButton.style.right = 'auto';
+
+                const desiredBottomOffset = 24;
+                const buttonHeight = topButton.offsetHeight;
+                const fixedPos = window.innerHeight - buttonHeight - desiredBottomOffset;
+                const stickyPos = cardRect.bottom - buttonHeight;
+
+                topButton.style.top = `${Math.min(fixedPos, stickyPos)}px`;
+                topButton.style.bottom = 'auto';
+                return;
+            }
+        }
+
+        // Fallback: keep it visible at bottom-right on narrow layouts.
+        topButton.style.left = 'auto';
+        topButton.style.right = '24px';
+        topButton.style.top = 'auto';
+        topButton.style.bottom = '24px';
     }
-
     let ticking = false;
     function throttledUpdater() {
         if (!ticking) {
@@ -1496,6 +1622,7 @@
     // --- Settings ---
     const DEFAULT_SETTINGS = {
         clickTitleQuickView: true,
+        middlefunClickTitleQuickView: true,
         showQuickViewToast: true,
         v2exClickTitleQuickView: true,
         v2exChannelFilterEnabled: false,
@@ -1550,7 +1677,16 @@
 
     function handleClickTitleQuickViewChange(enabled, options = {}) {
         if (!options.silent) {
-            const message = enabled ? '✅ 已启用：点击帖子标题开启快速查看' : '⬜ 已禁用：点击帖子标题开启快速查看';
+            const message = enabled ? '✅ 已启用：2libra 点击帖子标题快速查看' : '⬜ 已禁用：2libra 点击帖子标题快速查看';
+            showToast(message, enabled ? 'success' : 'info');
+        }
+        processAllPostItems();
+        syncSettingsModalState();
+    }
+
+    function handleMiddlefunClickTitleQuickViewChange(enabled, options = {}) {
+        if (!options.silent) {
+            const message = enabled ? '✅ 已启用：middlefun 点击帖子标题快速查看' : '⬜ 已禁用：middlefun 点击帖子标题快速查看';
             showToast(message, enabled ? 'success' : 'info');
         }
         processAllPostItems();
@@ -1596,6 +1732,8 @@
 
         if (key === 'clickTitleQuickView') {
             handleClickTitleQuickViewChange(normalizedValue, options);
+        } else if (key === 'middlefunClickTitleQuickView') {
+            handleMiddlefunClickTitleQuickViewChange(normalizedValue, options);
         } else if (key === 'showQuickViewToast') {
             handleShowQuickViewToastChange(normalizedValue, options);
         } else if (key === 'v2exClickTitleQuickView') {
@@ -1611,6 +1749,12 @@
         },
         set clickTitleQuickView(value) {
             updateSetting('clickTitleQuickView', value);
+        },
+        get middlefunClickTitleQuickView() {
+            return Boolean(GM_getValue('middlefunClickTitleQuickView', DEFAULT_SETTINGS.middlefunClickTitleQuickView));
+        },
+        set middlefunClickTitleQuickView(value) {
+            updateSetting('middlefunClickTitleQuickView', value);
         },
         get showQuickViewToast() {
             return Boolean(GM_getValue('showQuickViewToast', DEFAULT_SETTINGS.showQuickViewToast));
@@ -1676,7 +1820,7 @@
                 <div class="settings-header">
                     <div>
                         <div class="settings-title">ForumMate 设置</div>
-                        <div class="settings-subtitle">修改后立即生效，当前支持 2libra.com 与 v2ex.com。</div>
+                        <div class="settings-subtitle">修改后立即生效，当前支持 2libra.com、middlefun.com 与 v2ex.com。</div>
                     </div>
                     <button class="btn-close-settings" type="button">完成</button>
                 </div>
@@ -1702,6 +1846,21 @@
                                 </div>
                                 <span class="settings-switch">
                                     <input type="checkbox" data-setting="showQuickViewToast">
+                                    <span class="settings-slider"></span>
+                                </span>
+                            </label>
+                        </div>
+                    </section>
+                    <section class="settings-group">
+                        <div class="settings-group-title">middlefun.com</div>
+                        <div class="settings-group-list">
+                            <label class="settings-item">
+                                <div class="settings-copy">
+                                    <span class="settings-name">点击帖子标题快速查看</span>
+                                    <span class="settings-description">该开关只控制标题点击快速预览；middlefun 站点不会显示“快速查看”按钮。</span>
+                                </div>
+                                <span class="settings-switch">
+                                    <input type="checkbox" data-setting="middlefunClickTitleQuickView">
                                     <span class="settings-slider"></span>
                                 </span>
                             </label>
@@ -1863,7 +2022,7 @@
             }
         });
 
-        let postFlatLinks = document.querySelectorAll('a[href^="/post-flat"]');
+        let postFlatLinks = document.querySelectorAll('a[href^="/post-flat"], a[href^="/posts/"], a[href*="://middlefun.com/posts/"]');
         if (!postFlatLinks || postFlatLinks.length === 0) {
             postFlatLinks = document.querySelectorAll('a[href^="/post/"]');
         }
