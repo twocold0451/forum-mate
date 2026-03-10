@@ -660,10 +660,47 @@
             line-height: 1.5;
         }
 
+        #${CONFIG.settingsModalId} .settings-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        #${CONFIG.settingsModalId} .btn-settings-action {
+            appearance: none;
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            background: rgba(255, 255, 255, 0.92);
+            color: #334155;
+            border-radius: 10px;
+            padding: 6px 10px;
+            font-size: 12px;
+            line-height: 1;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        #${CONFIG.settingsModalId} .btn-settings-action:hover {
+            border-color: rgba(0, 0, 0, 0.22);
+            background: #fff;
+        }
+
         #${CONFIG.settingsModalId} .settings-group {
             display: flex;
             flex-direction: column;
             gap: 8px;
+        }
+
+        #${CONFIG.settingsModalId} .settings-group-toggle {
+            appearance: none;
+            width: 100%;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.78);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
         }
 
         #${CONFIG.settingsModalId} .settings-group-title {
@@ -671,13 +708,27 @@
             font-weight: 700;
             letter-spacing: 0.02em;
             color: #4f46e5;
+            text-align: left;
         }
 
-        
+        #${CONFIG.settingsModalId} .settings-group-chevron {
+            color: #64748b;
+            font-size: 12px;
+            transition: transform 0.2s ease;
+        }
+
+        #${CONFIG.settingsModalId} .settings-group.is-collapsed .settings-group-chevron {
+            transform: rotate(-90deg);
+        }
+
         #${CONFIG.settingsModalId} .settings-group-list {
             display: flex;
             flex-direction: column;
             gap: 8px;
+        }
+
+        #${CONFIG.settingsModalId} .settings-group.is-collapsed .settings-group-list {
+            display: none;
         }
         #${CONFIG.settingsModalId} .settings-subgroup {
             display: flex;
@@ -1404,7 +1455,9 @@
         const pageScrollTop = Math.max(
             window.scrollY || 0,
             document.documentElement ? document.documentElement.scrollTop : 0,
-            document.body ? document.body.scrollTop : 0
+            document.body ? document.body.scrollTop : 0,
+            document.scrollingElement ? document.scrollingElement.scrollTop : 0,
+            lastScrollSource && typeof lastScrollSource.scrollTop === 'number' ? lastScrollSource.scrollTop : 0
         );
         const isScrolledDown = pageScrollTop > 100;
 
@@ -1451,8 +1504,13 @@
         topButton.style.top = 'auto';
         topButton.style.bottom = '24px';
     }
+    let lastScrollSource = null;
     let ticking = false;
-    function throttledUpdater() {
+    function throttledUpdater(event) {
+        if (event && event.target && typeof event.target.scrollTop === 'number') {
+            lastScrollSource = event.target;
+        }
+
         if (!ticking) {
             window.requestAnimationFrame(() => {
                 updateTopButtonPosition();
@@ -1461,7 +1519,6 @@
             ticking = true;
         }
     }
-
     function refreshBackToTopButtonState() {
         if (!isBackToTopButtonEnabledForCurrentSite()) {
             hideTopButtonImmediately();
@@ -1471,6 +1528,7 @@
     }
 
     window.addEventListener('scroll', throttledUpdater);
+    document.addEventListener('scroll', throttledUpdater, true);
     window.addEventListener('resize', throttledUpdater);
     setTimeout(refreshBackToTopButtonState, 500);
 
@@ -1896,6 +1954,28 @@
         });
     }
 
+    function setSettingsGroupExpanded(groupElement, expanded) {
+        groupElement.classList.toggle('is-collapsed', !expanded);
+        const toggleButton = groupElement.querySelector('[data-group-toggle]');
+        if (toggleButton) {
+            toggleButton.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        }
+    }
+
+    function setAllSettingsGroupsExpanded(modal, expanded) {
+        modal.querySelectorAll('.settings-group[data-site-group]').forEach(groupElement => {
+            setSettingsGroupExpanded(groupElement, expanded);
+        });
+    }
+
+    function resetSettingsGroupsForCurrentSite(modal) {
+        const currentSiteKey = getCurrentSiteKey();
+        modal.querySelectorAll('.settings-group[data-site-group]').forEach(groupElement => {
+            const groupSiteKey = groupElement.dataset.siteGroup;
+            setSettingsGroupExpanded(groupElement, groupSiteKey === currentSiteKey);
+        });
+    }
+
     function createSettingsModal() {
         if (document.getElementById(CONFIG.settingsModalId)) return;
 
@@ -1912,8 +1992,15 @@
                 </div>
                 <div class="settings-body">
                     <p class="settings-intro">设置项按已支持网站分组展示，修改后会立即生效。</p>
-                    <section class="settings-group">
-                        <div class="settings-group-title">2libra.com</div>
+                    <div class="settings-actions">
+                        <button class="btn-settings-action" type="button" data-settings-action="expand-all">展开全部</button>
+                        <button class="btn-settings-action" type="button" data-settings-action="collapse-all">收起全部</button>
+                    </div>
+                    <section class="settings-group" data-site-group="2libra">
+                        <button class="settings-group-toggle" type="button" data-group-toggle="2libra" aria-expanded="false">
+                            <span class="settings-group-title">2libra.com</span>
+                            <span class="settings-group-chevron">▾</span>
+                        </button>
                         <div class="settings-group-list">
                             <label class="settings-item">
                                 <div class="settings-copy">
@@ -1947,8 +2034,11 @@
                             </label>
                         </div>
                     </section>
-                    <section class="settings-group">
-                        <div class="settings-group-title">middlefun.com</div>
+                    <section class="settings-group" data-site-group="middlefun">
+                        <button class="settings-group-toggle" type="button" data-group-toggle="middlefun" aria-expanded="false">
+                            <span class="settings-group-title">middlefun.com</span>
+                            <span class="settings-group-chevron">▾</span>
+                        </button>
                         <div class="settings-group-list">
                             <label class="settings-item">
                                 <div class="settings-copy">
@@ -1972,8 +2062,11 @@
                             </label>
                         </div>
                     </section>
-                    <section class="settings-group">
-                        <div class="settings-group-title">v2ex.com</div>
+                    <section class="settings-group" data-site-group="v2ex">
+                        <button class="settings-group-toggle" type="button" data-group-toggle="v2ex" aria-expanded="false">
+                            <span class="settings-group-title">v2ex.com</span>
+                            <span class="settings-group-chevron">▾</span>
+                        </button>
                         <div class="settings-group-list">
                             <label class="settings-item">
                                 <div class="settings-copy">
@@ -2057,6 +2150,32 @@
             window.open(CONFIG.appreciationUrl, '_blank', 'noopener,noreferrer');
         });
 
+        modal.querySelectorAll('[data-group-toggle]').forEach(toggleButton => {
+            toggleButton.addEventListener('click', event => {
+                const currentButton = event.currentTarget;
+                const groupSiteKey = currentButton.dataset.groupToggle;
+                const groupElement = modal.querySelector('.settings-group[data-site-group="' + groupSiteKey + '"]');
+                if (!groupElement) return;
+
+                const isExpanded = currentButton.getAttribute('aria-expanded') === 'true';
+                setSettingsGroupExpanded(groupElement, !isExpanded);
+            });
+        });
+
+        const expandAllButton = modal.querySelector('[data-settings-action="expand-all"]');
+        if (expandAllButton) {
+            expandAllButton.addEventListener('click', () => {
+                setAllSettingsGroupsExpanded(modal, true);
+            });
+        }
+
+        const collapseAllButton = modal.querySelector('[data-settings-action="collapse-all"]');
+        if (collapseAllButton) {
+            collapseAllButton.addEventListener('click', () => {
+                setAllSettingsGroupsExpanded(modal, false);
+            });
+        }
+
         modal.querySelectorAll('[data-setting]').forEach(control => {
             const eventName = control.type === 'checkbox' ? 'change' : 'input';
             control.addEventListener(eventName, event => {
@@ -2086,6 +2205,7 @@
 
         modal.style.setProperty('--forummate-dynamic-bg', bg);
         modal.dataset.forummateSite = isV2exSettings ? 'v2ex' : '2libra';
+        resetSettingsGroupsForCurrentSite(modal);
         syncSettingsModalState();
         modal.classList.add('active');
         syncBodyScrollLock();
