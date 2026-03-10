@@ -19,8 +19,6 @@ ForumMate 是一个面向论坛场景的浏览器辅助工具。当前已支持 
 ## 🌐 支持的网站
 
 ### 2libra.com
-- 状态：已支持
-- 地址：[https://2libra.com/](https://2libra.com/) / [https://www.2libra.com/](https://www.2libra.com/)
 - 当前能力：帖子快速预览、纯净模式、智能返回顶部、通知快速查看
 
 #### 功能说明
@@ -29,8 +27,6 @@ ForumMate 是一个面向论坛场景的浏览器辅助工具。当前已支持 
 - **智能返回顶部**：全新的悬浮返回顶部按钮，智能吸附在内容区右侧。
 
 ### v2ex.com
-- 状态：已支持
-- 地址：[https://v2ex.com/](https://v2ex.com/) / [https://www.v2ex.com/](https://www.v2ex.com/)
 - 当前能力：点击帖子标题快速查看、按频道与标题关键字屏蔽帖子
 
 #### 功能说明
