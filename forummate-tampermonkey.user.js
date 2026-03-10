@@ -701,6 +701,12 @@
             gap: 8px;
             padding: 10px 12px;
             cursor: pointer;
+            transition: border-color 0.2s ease, background 0.2s ease;
+        }
+
+        #${CONFIG.settingsModalId} .settings-group:not(.is-collapsed) .settings-group-toggle {
+            border-color: rgba(79, 70, 229, 0.24);
+            background: rgba(255, 255, 255, 0.92);
         }
 
         #${CONFIG.settingsModalId} .settings-group-title {
@@ -725,6 +731,11 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+            margin-left: 12px;
+            padding: 10px 10px 10px 12px;
+            border-left: 2px solid rgba(79, 70, 229, 0.22);
+            border-radius: 12px;
+            background: linear-gradient(180deg, rgba(79, 70, 229, 0.06), rgba(79, 70, 229, 0.02));
         }
 
         #${CONFIG.settingsModalId} .settings-group.is-collapsed .settings-group-list {
@@ -734,9 +745,9 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            margin-left: 18px;
-            padding-left: 12px;
-            border-left: 2px solid rgba(79, 70, 229, 0.18);
+            margin-left: 10px;
+            padding-left: 10px;
+            border-left: 2px dashed rgba(79, 70, 229, 0.22);
         }
         #${CONFIG.settingsModalId} .settings-item {
             display: flex;
@@ -1986,12 +1997,11 @@
                 <div class="settings-header">
                     <div>
                         <div class="settings-title">ForumMate 设置</div>
-                        <div class="settings-subtitle">修改后立即生效，当前支持 2libra.com、middlefun.com 与 v2ex.com。</div>
+                        <div class="settings-subtitle">修改后立即生效</div>
                     </div>
                     <button class="btn-close-settings" type="button">完成</button>
                 </div>
                 <div class="settings-body">
-                    <p class="settings-intro">设置项按已支持网站分组展示，修改后会立即生效。</p>
                     <div class="settings-actions">
                         <button class="btn-settings-action" type="button" data-settings-action="expand-all">展开全部</button>
                         <button class="btn-settings-action" type="button" data-settings-action="collapse-all">收起全部</button>
@@ -2043,7 +2053,7 @@
                             <label class="settings-item">
                                 <div class="settings-copy">
                                     <span class="settings-name">点击帖子标题快速查看</span>
-                                    <span class="settings-description">该开关只控制标题点击快速预览；middlefun 站点不会显示“快速查看”按钮。</span>
+                                    <span class="settings-description">开启后点击标题直接弹出预览</span>
                                 </div>
                                 <span class="settings-switch">
                                     <input type="checkbox" data-setting="middlefunClickTitleQuickView">
@@ -2071,7 +2081,7 @@
                             <label class="settings-item">
                                 <div class="settings-copy">
                                     <span class="settings-name">点击帖子标题快速查看</span>
-                                    <span class="settings-description">拦截 /t/数字 形式的帖子标题链接，点击后直接用当前弹窗样式预览主题内容。</span>
+                                    <span class="settings-description">开启后点击标题直接弹出预览</span>
                                 </div>
                                 <span class="settings-switch">
                                     <input type="checkbox" data-setting="v2exClickTitleQuickView">
@@ -2091,7 +2101,7 @@
                             <label class="settings-item">
                                 <div class="settings-copy">
                                     <span class="settings-name">屏蔽指定频道帖子</span>
-                                    <span class="settings-description">开启后按下面的子规则隐藏 V2EX 列表项；这些设置只对 v2ex.com 生效。</span>
+                                    <span class="settings-description">开启后按下面的子规则隐藏 V2EX 列表项</span>
                                 </div>
                                 <span class="settings-switch">
                                     <input type="checkbox" data-setting="v2exChannelFilterEnabled">
