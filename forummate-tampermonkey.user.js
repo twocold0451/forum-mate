@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ForumMate 论坛增强助手
 // @namespace    http://tampermonkey.net/
-// @version      1.8.2
+// @version      1.9.0
 // @description  ForumMate 论坛增强助手：当前支持 2libra.com、middlefun.com、v2ex.com 的帖子快速查看与筛选
 // @author       twocold0451
 // @homepage     https://github.com/twocold0451/forum-mate
