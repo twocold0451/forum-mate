@@ -65,8 +65,16 @@
     const FORUMMATE_SITE_CLASS = 'forummate-site-' + getCurrentSiteKey();
     document.documentElement.classList.add(FORUMMATE_SITE_CLASS);
 
-    const TOP_BUTTON_LAYOUT_BY_SITE_CLASS = {
-        'forummate-site-middlefun': 'fixed-bottom-right'
+    const TOP_BUTTON_HORIZONTAL_OFFSET = 12;
+    const BACK_TO_TOP_SETTING_KEY_BY_SITE = {
+        '2libra': 'showBackToTopButton',
+        'middlefun': 'middlefunShowBackToTopButton',
+        'v2ex': 'v2exShowBackToTopButton'
+    };
+    const BACK_TO_TOP_SETTING_DEFAULTS = {
+        showBackToTopButton: true,
+        middlefunShowBackToTopButton: true,
+        v2exShowBackToTopButton: true
     };
 
     function isEmbeddedFrame() {
@@ -129,7 +137,7 @@
           display: block;
           width: 25%;
           height: 25%;
-          background-color: var(--color-primary, #4a00ff);
+          background-color: var(--color-primary, #5b6b8c);
           border-radius: 100%;
           animation: sk-chase-dot 2.0s infinite ease-in-out both;
         }
@@ -157,7 +165,7 @@
         .sk-pulse {
           width: 40px;
           height: 40px;
-          background-color: var(--color-primary, #4a00ff);
+          background-color: var(--color-primary, #5b6b8c);
           border-radius: 50%;
           animation: sk-pulse 1.5s infinite ease-in-out;
         }
@@ -178,7 +186,7 @@
         .sk-ripple:after {
           content: '';
           position: absolute;
-          border: 2px solid var(--color-primary, #4a00ff);
+          border: 2px solid var(--color-primary, #5b6b8c);
           border-radius: 50%;
           animation: sk-ripple 1.5s infinite;
         }
@@ -196,8 +204,8 @@
         .sk-rotate {
           width: 40px;
           height: 40px;
-          border: 3px solid rgba(74, 0, 255, 0.3);
-          border-top: 3px solid var(--color-primary, #4a00ff);
+          border: 3px solid rgba(91, 107, 140, 0.3);
+          border-top: 3px solid var(--color-primary, #5b6b8c);
           border-radius: 50%;
           animation: sk-rotate 1.2s infinite linear;
         }
@@ -222,7 +230,7 @@
           width: 100%;
           height: 100%;
           border-radius: 50%;
-          background-color: var(--color-primary, #4a00ff);
+          background-color: var(--color-primary, #5b6b8c);
           animation: sk-bounce 1.4s infinite ease-in-out both;
         }
 
@@ -256,7 +264,7 @@
           width: 100%;
           height: 100%;
           border-radius: 50%;
-          background-color: var(--color-primary, #4a00ff);
+          background-color: var(--color-primary, #5b6b8c);
           animation: sk-wave 1.3s infinite ease-in-out;
         }
 
@@ -278,7 +286,7 @@
         .sk-cube-grid .sk-cube {
           width: 33%;
           height: 33%;
-          background-color: var(--color-primary, #4a00ff);
+          background-color: var(--color-primary, #5b6b8c);
           float: left;
           animation: sk-cube 1.3s infinite ease-in-out;
         }
@@ -298,7 +306,7 @@
             font-size: 12px;
             cursor: pointer;
             border-radius: 4px;
-            background-color: var(--color-primary, #4a00ff);
+            background-color: var(--color-primary, #5b6b8c);
             color: #fff;
             border: none;
             display: none;
@@ -328,7 +336,7 @@
             background: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(12px) saturate(180%);
             -webkit-backdrop-filter: blur(12px) saturate(180%);
-            color: var(--color-primary, #4a00ff);
+            color: var(--color-primary, #5b6b8c);
             border: 1px solid rgba(255, 255, 255, 0.3);
             cursor: pointer;
             display: none;
@@ -347,10 +355,10 @@
         }
 
         #custom-back-to-top:hover {
-            background: var(--color-primary, #4a00ff);
+            background: var(--color-primary, #5b6b8c);
             color: #fff;
             transform: translateY(-4px);
-            box-shadow: 0 12px 40px rgba(74, 0, 255, 0.2);
+            box-shadow: 0 12px 40px rgba(91, 107, 140, 0.2);
             border-color: transparent;
         }
 
@@ -428,7 +436,7 @@
         }
         #${CONFIG.modalId} .btn-go-thread {
             padding: 6px 16px;
-            background-color: var(--color-primary, #4a00ff);
+            background-color: var(--color-primary, #5b6b8c);
             color: #fff;
             border: none;
             border-radius: 6px;
@@ -470,7 +478,7 @@
 
         .loading-content {
             text-align: center;
-            color: var(--color-primary, #4a00ff);
+            color: var(--color-primary, #5b6b8c);
             width: 100%;
             display: flex;
             flex-direction: column;
@@ -510,9 +518,9 @@
             background: var(--base-100, #fff);
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            border-left: 4px solid var(--color-primary, #4a00ff);
+            border-left: 4px solid var(--color-primary, #5b6b8c);
             font-size: 14px;
-            color: var(--color-primary, #4a00ff);
+            color: var(--color-primary, #5b6b8c);
             opacity: 0;
             transform: translateX(100%);
             transition: all 0.3s ease;
@@ -533,8 +541,8 @@
         }
 
         .forummate-toast.info {
-            border-left-color: var(--color-primary, #4a00ff);
-            color: var(--color-primary, #4a00ff);
+            border-left-color: var(--color-primary, #5b6b8c);
+            color: var(--color-primary, #5b6b8c);
         }
 
         #${CONFIG.settingsButtonId} {
@@ -548,7 +556,7 @@
             background: rgba(255, 255, 255, 0.82);
             backdrop-filter: blur(12px) saturate(180%);
             -webkit-backdrop-filter: blur(12px) saturate(180%);
-            color: var(--color-primary, #4a00ff);
+            color: var(--color-primary, #5b6b8c);
             border: 1px solid rgba(255, 255, 255, 0.32);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
             display: inline-flex;
@@ -561,10 +569,10 @@
         }
 
         #${CONFIG.settingsButtonId}:hover {
-            background: var(--color-primary, #4a00ff);
+            background: var(--color-primary, #5b6b8c);
             color: #fff;
             transform: translateY(-2px);
-            box-shadow: 0 12px 40px rgba(74, 0, 255, 0.2);
+            box-shadow: 0 12px 40px rgba(91, 107, 140, 0.2);
             border-color: transparent;
         }
 
@@ -769,7 +777,7 @@
             transition: transform 0.25s ease;
         }
         #${CONFIG.settingsModalId} .settings-switch input:checked + .settings-slider {
-            background: var(--color-primary, #4a00ff);
+            background: var(--color-primary, #5b6b8c);
         }
         #${CONFIG.settingsModalId} .settings-switch input:checked + .settings-slider::after {
             transform: translateX(18px);
@@ -809,7 +817,7 @@
         }
 
         #${CONFIG.settingsModalId} .btn-close-settings {
-            background: var(--color-primary, #4a00ff);
+            background: var(--color-primary, #5b6b8c);
             color: #fff;
         }
 
@@ -889,7 +897,7 @@
         }
         #notifications-modal .btn-back-notifications {
              padding: 4px 12px;
-            background-color: var(--color-primary, #4a00ff);
+            background-color: var(--color-primary, #5b6b8c);
             color: #fff;
             border: none;
             border-radius: 6px;
@@ -1328,8 +1336,18 @@
         }
     }, { passive: true });
 
-
     // --- Back-to-top button logic ---
+
+    function isBackToTopButtonEnabledForCurrentSite() {
+        const settingKey = BACK_TO_TOP_SETTING_KEY_BY_SITE[getCurrentSiteKey()];
+        if (!settingKey) return false;
+
+        if (Settings && typeof Settings[settingKey] === 'boolean') {
+            return Settings[settingKey];
+        }
+
+        return Boolean(GM_getValue(settingKey, BACK_TO_TOP_SETTING_DEFAULTS[settingKey]));
+    }
 
     // 1. Create the button and mount it once
     const topButton = document.createElement('button');
@@ -1341,14 +1359,48 @@
     `;
     document.body.appendChild(topButton);
 
+    function hideTopButtonImmediately() {
+        topButton.classList.remove('visible');
+        topButton.style.display = 'none';
+    }
+
     // 2. Bind the scroll-to-top action
     topButton.addEventListener('click', () => {
+        if (!isBackToTopButtonEnabledForCurrentSite()) return;
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     // 3. Keep the button positioned and visible when needed
+    function getTopButtonAnchorElement() {
+        if (isMiddlefunSite()) {
+            return document.querySelector('div.lg\\:col-span-7.pb-12') || document.querySelector('.lg\\:col-span-7.pb-12');
+        }
+        if (isV2exSite()) {
+            return document.querySelector('#Main .box') || document.querySelector('div.box') || document.querySelector('.box');
+        }
+        const primaryColumn = document.querySelector('[data-main-left="true"]') || document.querySelector('main .flex-1') || document.querySelector('.flex-1');
+        if (primaryColumn) return primaryColumn;
+
+        const cardCandidates = Array.from(document.querySelectorAll('ul.card'));
+        if (cardCandidates.length > 0) {
+            const tallestCard = cardCandidates.reduce((maxCard, currentCard) => {
+                return currentCard.getBoundingClientRect().height > maxCard.getBoundingClientRect().height
+                    ? currentCard
+                    : maxCard;
+            });
+            return tallestCard;
+        }
+
+        return null;
+    }
+
     function updateTopButtonPosition() {
-        const card = document.querySelector('ul.card') || document.querySelector('[data-main-left="true"]') || document.querySelector('.flex-1');
+        if (!isBackToTopButtonEnabledForCurrentSite()) {
+            hideTopButtonImmediately();
+            return;
+        }
+
+        const anchorElement = getTopButtonAnchorElement();
         const pageScrollTop = Math.max(
             window.scrollY || 0,
             document.documentElement ? document.documentElement.scrollTop : 0,
@@ -1371,33 +1423,23 @@
             topButton.classList.add('visible');
         });
 
-        const topButtonLayout = TOP_BUTTON_LAYOUT_BY_SITE_CLASS[FORUMMATE_SITE_CLASS] || 'anchored';
-
-        // Site-specific fallback using class-based layout strategy.
-        if (topButtonLayout === 'fixed-bottom-right') {
-            topButton.style.left = 'auto';
-            topButton.style.right = '24px';
-            topButton.style.top = 'auto';
-            topButton.style.bottom = '24px';
-            return;
-        }
-
         // Prefer anchoring to the content column when there is enough room.
-        if (card) {
-            const cardRect = card.getBoundingClientRect();
-            const requiredWidth = cardRect.width + 60;
+        if (anchorElement) {
+            const anchorRect = anchorElement.getBoundingClientRect();
+            const requiredWidth = anchorRect.width + 60;
             const hasEnoughSpace = window.innerWidth >= requiredWidth;
 
             if (hasEnoughSpace) {
-                topButton.style.left = `${cardRect.right + 16}px`;
+                topButton.style.left = `${anchorRect.right + TOP_BUTTON_HORIZONTAL_OFFSET}px`;
                 topButton.style.right = 'auto';
 
                 const desiredBottomOffset = 24;
                 const buttonHeight = topButton.offsetHeight;
                 const fixedPos = window.innerHeight - buttonHeight - desiredBottomOffset;
-                const stickyPos = cardRect.bottom - buttonHeight;
+                const stickyPos = anchorRect.bottom - buttonHeight;
+                const anchoredTop = stickyPos > 0 ? Math.min(fixedPos, stickyPos) : fixedPos;
 
-                topButton.style.top = `${Math.min(fixedPos, stickyPos)}px`;
+                topButton.style.top = `${Math.max(16, anchoredTop)}px`;
                 topButton.style.bottom = 'auto';
                 return;
             }
@@ -1420,9 +1462,17 @@
         }
     }
 
+    function refreshBackToTopButtonState() {
+        if (!isBackToTopButtonEnabledForCurrentSite()) {
+            hideTopButtonImmediately();
+            return;
+        }
+        throttledUpdater();
+    }
+
     window.addEventListener('scroll', throttledUpdater);
     window.addEventListener('resize', throttledUpdater);
-    setTimeout(throttledUpdater, 500);
+    setTimeout(refreshBackToTopButtonState, 500);
 
     // --- Loading animations ---
 
@@ -1625,6 +1675,9 @@
         middlefunClickTitleQuickView: true,
         showQuickViewToast: true,
         v2exClickTitleQuickView: true,
+        showBackToTopButton: true,
+        middlefunShowBackToTopButton: true,
+        v2exShowBackToTopButton: true,
         v2exChannelFilterEnabled: false,
         v2exBlockedChannels: '',
         v2exTitleKeywords: '',
@@ -1710,7 +1763,20 @@
         processAllPostItems();
         syncSettingsModalState();
     }
-
+    function handleBackToTopButtonSettingChange(key, enabled, options = {}) {
+        if (!options.silent) {
+            const settingLabelByKey = {
+                showBackToTopButton: '2libra 返回顶部按钮',
+                middlefunShowBackToTopButton: 'middlefun 返回顶部按钮',
+                v2exShowBackToTopButton: 'V2EX 返回顶部按钮'
+            };
+            const settingLabel = settingLabelByKey[key] || '返回顶部按钮';
+            const message = enabled ? `✅ 已启用：${settingLabel}` : `⬜ 已禁用：${settingLabel}`;
+            showToast(message, enabled ? 'success' : 'info');
+        }
+        refreshBackToTopButtonState();
+        syncSettingsModalState();
+    }
     function handleV2exSettingsChange(options = {}) {
         if (!options.silent) {
             showToast('✅ 已更新：V2EX 频道屏蔽设置', 'success');
@@ -1738,6 +1804,8 @@
             handleShowQuickViewToastChange(normalizedValue, options);
         } else if (key === 'v2exClickTitleQuickView') {
             handleV2exClickTitleQuickViewChange(normalizedValue, options);
+        } else if (key === 'showBackToTopButton' || key === 'middlefunShowBackToTopButton' || key === 'v2exShowBackToTopButton') {
+            handleBackToTopButtonSettingChange(key, normalizedValue, options);
         } else if (key === 'v2exChannelFilterEnabled' || key === 'v2exBlockedChannels' || key === 'v2exTitleKeywords' || key === 'v2exFilterRelation') {
             handleV2exSettingsChange(options);
         }
@@ -1767,6 +1835,24 @@
         },
         set v2exClickTitleQuickView(value) {
             updateSetting('v2exClickTitleQuickView', value);
+        },
+        get showBackToTopButton() {
+            return Boolean(GM_getValue('showBackToTopButton', DEFAULT_SETTINGS.showBackToTopButton));
+        },
+        set showBackToTopButton(value) {
+            updateSetting('showBackToTopButton', value);
+        },
+        get middlefunShowBackToTopButton() {
+            return Boolean(GM_getValue('middlefunShowBackToTopButton', DEFAULT_SETTINGS.middlefunShowBackToTopButton));
+        },
+        set middlefunShowBackToTopButton(value) {
+            updateSetting('middlefunShowBackToTopButton', value);
+        },
+        get v2exShowBackToTopButton() {
+            return Boolean(GM_getValue('v2exShowBackToTopButton', DEFAULT_SETTINGS.v2exShowBackToTopButton));
+        },
+        set v2exShowBackToTopButton(value) {
+            updateSetting('v2exShowBackToTopButton', value);
         },
         get v2exChannelFilterEnabled() {
             return Boolean(GM_getValue('v2exChannelFilterEnabled', DEFAULT_SETTINGS.v2exChannelFilterEnabled));
@@ -1849,6 +1935,16 @@
                                     <span class="settings-slider"></span>
                                 </span>
                             </label>
+                            <label class="settings-item">
+                                <div class="settings-copy">
+                                    <span class="settings-name">返回顶部按钮</span>
+                                    <span class="settings-description">开启后滚动页面会在右下方显示返回顶部按钮；关闭后不再显示。</span>
+                                </div>
+                                <span class="settings-switch">
+                                    <input type="checkbox" data-setting="showBackToTopButton">
+                                    <span class="settings-slider"></span>
+                                </span>
+                            </label>
                         </div>
                     </section>
                     <section class="settings-group">
@@ -1864,6 +1960,16 @@
                                     <span class="settings-slider"></span>
                                 </span>
                             </label>
+                            <label class="settings-item">
+                                <div class="settings-copy">
+                                    <span class="settings-name">返回顶部按钮</span>
+                                    <span class="settings-description">开启后滚动页面会显示返回顶部按钮；关闭后不再显示。</span>
+                                </div>
+                                <span class="settings-switch">
+                                    <input type="checkbox" data-setting="middlefunShowBackToTopButton">
+                                    <span class="settings-slider"></span>
+                                </span>
+                            </label>
                         </div>
                     </section>
                     <section class="settings-group">
@@ -1876,6 +1982,16 @@
                                 </div>
                                 <span class="settings-switch">
                                     <input type="checkbox" data-setting="v2exClickTitleQuickView">
+                                    <span class="settings-slider"></span>
+                                </span>
+                            </label>
+                            <label class="settings-item">
+                                <div class="settings-copy">
+                                    <span class="settings-name">返回顶部按钮</span>
+                                    <span class="settings-description">开启后滚动页面会显示返回顶部按钮；关闭后不再显示。</span>
+                                </div>
+                                <span class="settings-switch">
+                                    <input type="checkbox" data-setting="v2exShowBackToTopButton">
                                     <span class="settings-slider"></span>
                                 </span>
                             </label>
