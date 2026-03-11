@@ -1,6 +1,6 @@
 # ForumMate (论坛增强助手)
 
-ForumMate 是一个面向论坛场景的浏览器辅助工具。当前已支持 [2libra.com](https://2libra.com/)、[middlefun.com](https://middlefun.com/) 与 [v2ex.com](https://v2ex.com/)（均支持子域名），后续会继续扩展更多论坛。
+ForumMate 是一个面向论坛场景的浏览器辅助工具。当前已支持 [2libra.com](https://2libra.com/)、[middlefun.com](https://middlefun.com/)、[v2ex.com](https://v2ex.com/) 与 [linux.do](https://linux.do/)（均支持子域名），后续会继续扩展更多论坛。
 
 ## 📥 安装方式
 
@@ -43,11 +43,19 @@ ForumMate 是一个面向论坛场景的浏览器辅助工具。当前已支持 
 - **规则关系可选**：当两项都填写时，可在设置里选择 `and` 或 `or` 关系决定命中方式。
 - **返回顶部按钮**：滚动后显示悬浮按钮。
 
+### linux.do
+- 当前能力：点击帖子标题快速查看、返回顶部按钮
+
+#### 功能说明
+- **点击帖子标题快速查看**：弹窗中预览主题内容。
+- **返回顶部按钮**：滚动后显示悬浮按钮。
+
 ## ⚙️ 设置说明
 
-- 设置项按站点分组展示（2libra / middlefun / v2ex）。
+- 设置项按站点分组展示（2libra / middlefun / v2ex / linux.do）。
 - 默认行为为：**当前访问站点展开，其他站点折叠**。
 - 支持站点分组手动展开/收起。
+- 支持按站点分别设置预览弹窗宽度。
 - 支持一键 **展开全部 / 收起全部**。
 
 
@@ -60,3 +68,5 @@ ForumMate 是一个面向论坛场景的浏览器辅助工具。当前已支持 
 ---
 Author: [twocold0451](https://github.com/twocold0451)
 License: MIT
+
+

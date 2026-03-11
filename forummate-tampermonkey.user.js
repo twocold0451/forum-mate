@@ -1,14 +1,16 @@
 // ==UserScript==
 // @name         ForumMate 论坛增强助手
 // @namespace    http://tampermonkey.net/
-// @version      1.9.0
-// @description  ForumMate 论坛增强助手：当前支持 2libra.com、middlefun.com、v2ex.com 的帖子快速查看与筛选
+// @version      1.10.0
+// @description  ForumMate 论坛增强助手：当前支持 2libra.com、middlefun.com、v2ex.com、linux.do 的帖子快速查看与筛选
 // @author       twocold0451
 // @homepage     https://github.com/twocold0451/forum-mate
 // @supportURL   https://github.com/twocold0451/forum-mate/issues
 // @match        https://*.2libra.com/*
 // @match        https://*.middlefun.com/*
 // @match        https://*.v2ex.com/*
+// @match        https://linux.do/*
+// @match        https://*.linux.do/*
 // @license MIT
 // @grant        GM_registerMenuCommand
 // @grant        GM_getValue
@@ -42,7 +44,8 @@
             family: '2libra-like',
             settings: Object.freeze({
                 titleQuickView: 'clickTitleQuickView',
-                backToTop: 'showBackToTopButton'
+                backToTop: 'showBackToTopButton',
+                modalWidth: 'quickViewModalWidth'
             }),
             features: Object.freeze({
                 skipInitInEmbeddedFrame: true,
@@ -72,7 +75,8 @@
             family: '2libra-like',
             settings: Object.freeze({
                 titleQuickView: 'middlefunClickTitleQuickView',
-                backToTop: 'middlefunShowBackToTopButton'
+                backToTop: 'middlefunShowBackToTopButton',
+                modalWidth: 'middlefunQuickViewModalWidth'
             }),
             features: Object.freeze({
                 skipInitInEmbeddedFrame: true,
@@ -105,7 +109,8 @@
             family: 'v2ex',
             settings: Object.freeze({
                 titleQuickView: 'v2exClickTitleQuickView',
-                backToTop: 'v2exShowBackToTopButton'
+                backToTop: 'v2exShowBackToTopButton',
+                modalWidth: 'v2exQuickViewModalWidth'
             }),
             features: Object.freeze({
                 skipInitInEmbeddedFrame: false,
@@ -130,10 +135,63 @@
             styles: Object.freeze({
                 transparentBgFallback: '#f5f5f5'
             })
+        }),
+        'linuxdo': Object.freeze({
+            key: 'linuxdo',
+            displayName: 'linux.do',
+            domains: Object.freeze(['linux.do']),
+            family: 'discourse',
+            settings: Object.freeze({
+                titleQuickView: 'linuxdoClickTitleQuickView',
+                backToTop: 'linuxdoShowBackToTopButton',
+                modalWidth: 'linuxdoQuickViewModalWidth'
+            }),
+            features: Object.freeze({
+                skipInitInEmbeddedFrame: false,
+                lazyListItemProcessing: false,
+                listQuickButtonEnabled: false,
+                previewHidePromotions: false,
+                previewUse2LibraLikeScrollMode: false,
+                notificationsQuickView: false,
+                v2exTopicFilter: false,
+                backToTopUseTallestCardFallback: false
+            }),
+            selectors: Object.freeze({
+                backToTopAnchors: Object.freeze(['.topic-list', '.topic-body', '#main-outlet'])
+            }),
+            urlRules: Object.freeze({
+                previewPathPattern: /^\/t\/[^/]+\/\d+(?:\/\d+)?$/i,
+                topicPathPattern: /^\/t\/[^/]+\/\d+(?:\/\d+)?$/i
+            }),
+            defaults: Object.freeze({
+                backToTopEnabled: true
+            }),
+            styles: Object.freeze({
+                transparentBgFallback: '#f6f7f9'
+            })
         })
     });
     const SITE_CONFIG_LIST = Object.freeze(Object.values(SITE_CONFIGS));
     const DEFAULT_SITE_KEY = '2libra';
+    const DEFAULT_MODAL_WIDTH_PERCENT = 60;
+    const QUICK_VIEW_MODAL_WIDTH_SETTING_KEYS = Object.freeze(
+        SITE_CONFIG_LIST
+            .map(siteConfig => siteConfig.settings ? siteConfig.settings.modalWidth : '')
+            .filter(Boolean)
+    );
+
+    function isQuickViewModalWidthSettingKey(settingKey) {
+        return QUICK_VIEW_MODAL_WIDTH_SETTING_KEYS.includes(settingKey);
+    }
+
+    function normalizeModalWidthPercent(value, fallbackValue = DEFAULT_MODAL_WIDTH_PERCENT) {
+        const parsedValue = Number(String(value ?? '').replace('%', '').trim());
+        if (!Number.isFinite(parsedValue)) {
+            return fallbackValue;
+        }
+        const roundedValue = Math.round(parsedValue);
+        return Math.min(90, Math.max(60, roundedValue));
+    }
 
     function isDomainOrSubdomain(hostname, domain) {
         return hostname === domain || hostname.endsWith(`.${domain}`);
@@ -199,6 +257,28 @@
         const siteConfig = getSiteConfigFromUrl(url);
         return siteConfig && siteConfig.settings ? siteConfig.settings.titleQuickView : fallbackKey;
     }
+    function getQuickViewModalWidthSettingKeyForUrl(url, fallbackKey = 'quickViewModalWidth') {
+        const siteConfig = getSiteConfigFromUrl(url);
+        return siteConfig && siteConfig.settings ? siteConfig.settings.modalWidth : fallbackKey;
+    }
+
+    function getQuickViewModalWidthPercentForUrl(url, fallbackValue = DEFAULT_MODAL_WIDTH_PERCENT) {
+        const widthSettingKey = getQuickViewModalWidthSettingKeyForUrl(url, 'quickViewModalWidth');
+        return normalizeModalWidthPercent(Settings[widthSettingKey], fallbackValue);
+    }
+
+    function refreshActiveQuickViewModalWidth() {
+        const modal = document.getElementById(CONFIG.modalId);
+        if (!modal || !modal.classList.contains('active')) return;
+
+        const activeSiteKey = modal.dataset.forummateSite || getCurrentSiteKey();
+        const activeSiteConfig = getSiteConfigByKey(activeSiteKey);
+        const widthSettingKey = activeSiteConfig && activeSiteConfig.settings
+            ? activeSiteConfig.settings.modalWidth
+            : 'quickViewModalWidth';
+        const widthPercent = normalizeModalWidthPercent(Settings[widthSettingKey], DEFAULT_MODAL_WIDTH_PERCENT);
+        modal.style.setProperty('--forummate-modal-width', `${widthPercent}%`);
+    }
     const FORUMMATE_SITE_CLASS = 'forummate-site-' + getCurrentSiteKey();
     document.documentElement.classList.add(FORUMMATE_SITE_CLASS);
 
@@ -220,6 +300,10 @@
 
     function isV2exTopicUrl(url) {
         return isUrlMatchedBySiteRule(url, 'v2ex', 'topicPathPattern');
+    }
+
+    function isLinuxDoTopicUrl(url) {
+        return isUrlMatchedBySiteRule(url, 'linuxdo', 'topicPathPattern');
     }
 
     function isMiddlefunPostUrl(url) {
@@ -531,9 +615,9 @@
             pointer-events: auto;
         }
         #${CONFIG.modalId} .modal-content {
-            width: 90%;
-            max-width: 1000px;
-            height: 90%;
+            width: min(var(--forummate-modal-width, 60%), calc(100vw - 16px));
+            max-width: none;
+            height: 92%;
             background: var(--base-100, var(--forummate-dynamic-bg, #fff));
             border-radius: 12px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
@@ -1197,6 +1281,8 @@
 
         modal.style.setProperty('--forummate-dynamic-bg', bg);
         modal.dataset.forummateSite = previewSiteKey;
+        const modalWidthPercent = getQuickViewModalWidthPercentForUrl(url, DEFAULT_MODAL_WIDTH_PERCENT);
+        modal.style.setProperty('--forummate-modal-width', String(modalWidthPercent) + '%');
 
         const iframe = document.getElementById(CONFIG.iframeId);
         const titleEl = modal.querySelector('.modal-title');
@@ -1256,8 +1342,38 @@
                 if (previewSiteConfig && previewSiteConfig.features && previewSiteConfig.features.previewUse2LibraLikeScrollMode) {
                     apply2LibraLikePreviewScrollMode(doc);
                 }
+                if (previewSiteKey === 'linuxdo') {
+                    const removeLinuxDoSidebarWrapper = () => {
+                        doc.querySelectorAll('.sidebar-wrapper').forEach(sidebarWrapper => {
+                            const parentElement = sidebarWrapper.parentElement;
+                            const parentClassName = parentElement && typeof parentElement.className === 'string'
+                                ? parentElement.className
+                                : '';
+                            const shouldRemoveParent = parentElement && /sidebar-(container|column)|\bsidebar\b/i.test(parentClassName);
 
-                // Reset scroll position inside the preview frame
+                            if (shouldRemoveParent) {
+                                parentElement.remove();
+                            } else {
+                                sidebarWrapper.remove();
+                            }
+                        });
+
+                        doc.body.classList.remove('has-sidebar-page');
+                        doc.documentElement.classList.remove('has-sidebar-page');
+
+                        const mainOutletWrapper = doc.querySelector('#main-outlet-wrapper');
+                        if (mainOutletWrapper) {
+                            mainOutletWrapper.style.setProperty('grid-template-columns', 'minmax(0, 1fr)', 'important');
+                            mainOutletWrapper.style.setProperty('gap', '0', 'important');
+                            mainOutletWrapper.style.setProperty('padding-left', '0', 'important');
+                        }
+                    };
+
+                    removeLinuxDoSidebarWrapper();
+                    const linuxDoSidebarObserver = new MutationObserver(removeLinuxDoSidebarWrapper);
+                    linuxDoSidebarObserver.observe(doc.body, { childList: true, subtree: true });
+                }
+
                 function scrollToTop() {
                     console.log('ForumMate Script: Loaded and running...');
                     const mainContent = doc.querySelector('[data-main-left="true"]');
@@ -1345,9 +1461,20 @@
     function getV2exQuickPreviewFrameCss(bg) {
         return `
             #Top, #Bottom, #Rightbar, .dock_area { display: none !important; }
-            html, body { background: ${bg} !important; overflow-y: auto !important; }
-            body { min-width: 0 !important; }
-            #Wrapper {
+            html, body { background: ${bg} !important; overflow-y: auto !important; }            body.has-sidebar-page {
+                --d-sidebar-width: 0 !important;
+                --d-main-content-gap: 0 !important;
+            }
+            #main-outlet-wrapper,
+            body.has-sidebar-page #main-outlet-wrapper {
+                grid-template-areas:
+                    "content"
+                    "below-content" !important;
+                grid-template-columns: minmax(0, 1fr) !important;
+                grid-template-rows: 1fr auto !important;
+                gap: 0 !important;
+                padding-left: 0 !important;
+            }            #Wrapper {
                 background: ${bg} !important;
                 min-width: 0 !important;
                 padding: 16px 0 24px !important;
@@ -1382,12 +1509,61 @@
         `;
     }
 
+    function getLinuxDoQuickPreviewFrameCss(bg) {
+        return `
+            .d-header,
+            .d-header-wrap,
+            .navigation-container,
+            .topic-map,
+            .post-notice,
+            .topic-above-posts,
+            .topic-below-posts-outlet,
+            .topic-footer-main-buttons,
+            .footer-nav,
+            .list-controls,
+            .sidebar-wrapper,
+            .powered-by-discourse {
+                display: none !important;
+            }
+            html, body { background: ${bg} !important; overflow-y: auto !important; }
+            body { min-width: 0 !important; }
+            body.has-sidebar-page {
+                --d-sidebar-width: 0 !important;
+                --d-main-content-gap: 0 !important;
+            }
+            #main-outlet-wrapper,
+            body.has-sidebar-page #main-outlet-wrapper {
+                grid-template-areas:
+                    "content"
+                    "below-content" !important;
+                grid-template-columns: minmax(0, 1fr) !important;
+                grid-template-rows: 1fr auto !important;
+                gap: 0 !important;
+                padding-left: 0 !important;
+            }
+            #main-outlet {
+                width: min(1120px, calc(100vw - 32px)) !important;
+                max-width: none !important;
+                margin: 0 auto !important;
+                padding: 16px 0 24px !important;
+            }
+            .topic-list,
+            .topic-list-body,
+            .topic-post,
+            .topic-body {
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+            }
+        `;
+    }
+
     function getQuickPreviewFrameCss(url, bg) {
         const previewSiteKey = resolveQuickPreviewSiteKey(url);
         const cssBuilderBySiteKey = {
             '2libra': get2LibraQuickPreviewFrameCss,
             'middlefun': getMiddlefunQuickPreviewFrameCss,
-            'v2ex': getV2exQuickPreviewFrameCss
+            'v2ex': getV2exQuickPreviewFrameCss,
+            'linuxdo': getLinuxDoQuickPreviewFrameCss
         };
         const cssBuilder = cssBuilderBySiteKey[previewSiteKey] || cssBuilderBySiteKey['2libra'];
         return cssBuilder(bg);
@@ -1545,6 +1721,13 @@ function removeListItemQuickButton(li) {
         return labelBySettingKey;
     }, {});
 
+    const QUICK_VIEW_WIDTH_LABEL_BY_SETTING_KEY = SITE_CONFIG_LIST.reduce((labelBySettingKey, siteConfig) => {
+        const settingKey = siteConfig.settings ? siteConfig.settings.modalWidth : '';
+        if (settingKey) {
+            labelBySettingKey[settingKey] = `${siteConfig.displayName} 弹窗宽度`;
+        }
+        return labelBySettingKey;
+    }, {});
     function getCurrentBackToTopSettingKey() {
         const currentSiteConfig = getCurrentSiteConfig() || getSiteConfigByKey(DEFAULT_SITE_KEY);
         return currentSiteConfig && currentSiteConfig.settings ? currentSiteConfig.settings.backToTop : '';
@@ -1955,12 +2138,18 @@ function removeListItemQuickButton(li) {
     // --- Settings ---
     const DEFAULT_SETTINGS = {
         clickTitleQuickView: true,
+        quickViewModalWidth: '60',
         middlefunClickTitleQuickView: true,
+        middlefunQuickViewModalWidth: '60',
         showQuickViewToast: true,
         v2exClickTitleQuickView: true,
+        v2exQuickViewModalWidth: '60',
+        linuxdoClickTitleQuickView: true,
+        linuxdoQuickViewModalWidth: '60',
         showBackToTopButton: true,
         middlefunShowBackToTopButton: true,
         v2exShowBackToTopButton: true,
+        linuxdoShowBackToTopButton: true,
         v2exChannelFilterEnabled: false,
         v2exBlockedChannels: '',
         v2exTitleKeywords: '',
@@ -2001,7 +2190,13 @@ function removeListItemQuickButton(li) {
     }
 
     function normalizeSettingValue(key, value) {
-        return typeof DEFAULT_SETTINGS[key] === 'boolean' ? Boolean(value) : String(value ?? '').trim();
+        if (typeof DEFAULT_SETTINGS[key] === 'boolean') {
+            return Boolean(value);
+        }
+        if (isQuickViewModalWidthSettingKey(key)) {
+            return String(normalizeModalWidthPercent(value, DEFAULT_MODAL_WIDTH_PERCENT));
+        }
+        return String(value ?? '').trim();
     }
 
     function parseFilterValues(value) {
@@ -2046,6 +2241,24 @@ function removeListItemQuickButton(li) {
         processAllPostItems();
         syncSettingsModalState();
     }
+
+    function handleLinuxDoClickTitleQuickViewChange(enabled, options = {}) {
+        if (!options.silent) {
+            const message = enabled ? '✅ 已启用：linux.do 点击帖子标题快速查看' : '⬜ 已禁用：linux.do 点击帖子标题快速查看';
+            showToast(message, enabled ? 'success' : 'info');
+        }
+        processAllPostItems();
+        syncSettingsModalState();
+    }
+    function handleQuickViewModalWidthSettingChange(key, value, options = {}) {
+        const widthPercent = normalizeModalWidthPercent(value, DEFAULT_MODAL_WIDTH_PERCENT);
+        if (!options.silent) {
+            const settingLabel = QUICK_VIEW_WIDTH_LABEL_BY_SETTING_KEY[key] || '弹窗宽度';
+            showToast(`✅ 已更新：${settingLabel} ${widthPercent}%`, 'success');
+        }
+        refreshActiveQuickViewModalWidth();
+        syncSettingsModalState();
+    }
     function handleBackToTopButtonSettingChange(key, enabled, options = {}) {
         if (!options.silent) {
             const settingLabel = BACK_TO_TOP_LABEL_BY_SETTING_KEY[key] || '返回顶部按钮';
@@ -2069,6 +2282,7 @@ function removeListItemQuickButton(li) {
             middlefunClickTitleQuickView: handleMiddlefunClickTitleQuickViewChange,
             showQuickViewToast: handleShowQuickViewToastChange,
             v2exClickTitleQuickView: handleV2exClickTitleQuickViewChange,
+            linuxdoClickTitleQuickView: handleLinuxDoClickTitleQuickViewChange,
             v2exChannelFilterEnabled: (_value, options = {}) => handleV2exSettingsChange(options),
             v2exBlockedChannels: (_value, options = {}) => handleV2exSettingsChange(options),
             v2exTitleKeywords: (_value, options = {}) => handleV2exSettingsChange(options),
@@ -2080,6 +2294,13 @@ function removeListItemQuickButton(li) {
             if (backToTopSettingKey) {
                 handlers[backToTopSettingKey] = (enabled, options = {}) => {
                     handleBackToTopButtonSettingChange(backToTopSettingKey, enabled, options);
+                };
+            }
+
+            const modalWidthSettingKey = siteConfig.settings ? siteConfig.settings.modalWidth : '';
+            if (modalWidthSettingKey) {
+                handlers[modalWidthSettingKey] = (value, options = {}) => {
+                    handleQuickViewModalWidthSettingChange(modalWidthSettingKey, value, options);
                 };
             }
         });
@@ -2111,11 +2332,23 @@ function removeListItemQuickButton(li) {
         set clickTitleQuickView(value) {
             updateSetting('clickTitleQuickView', value);
         },
+        get quickViewModalWidth() {
+            return String(normalizeModalWidthPercent(GM_getValue('quickViewModalWidth', DEFAULT_SETTINGS.quickViewModalWidth), DEFAULT_MODAL_WIDTH_PERCENT));
+        },
+        set quickViewModalWidth(value) {
+            updateSetting('quickViewModalWidth', value);
+        },
         get middlefunClickTitleQuickView() {
             return Boolean(GM_getValue('middlefunClickTitleQuickView', DEFAULT_SETTINGS.middlefunClickTitleQuickView));
         },
         set middlefunClickTitleQuickView(value) {
             updateSetting('middlefunClickTitleQuickView', value);
+        },
+        get middlefunQuickViewModalWidth() {
+            return String(normalizeModalWidthPercent(GM_getValue('middlefunQuickViewModalWidth', DEFAULT_SETTINGS.middlefunQuickViewModalWidth), DEFAULT_MODAL_WIDTH_PERCENT));
+        },
+        set middlefunQuickViewModalWidth(value) {
+            updateSetting('middlefunQuickViewModalWidth', value);
         },
         get showQuickViewToast() {
             return Boolean(GM_getValue('showQuickViewToast', DEFAULT_SETTINGS.showQuickViewToast));
@@ -2128,6 +2361,24 @@ function removeListItemQuickButton(li) {
         },
         set v2exClickTitleQuickView(value) {
             updateSetting('v2exClickTitleQuickView', value);
+        },
+        get v2exQuickViewModalWidth() {
+            return String(normalizeModalWidthPercent(GM_getValue('v2exQuickViewModalWidth', DEFAULT_SETTINGS.v2exQuickViewModalWidth), DEFAULT_MODAL_WIDTH_PERCENT));
+        },
+        set v2exQuickViewModalWidth(value) {
+            updateSetting('v2exQuickViewModalWidth', value);
+        },
+        get linuxdoClickTitleQuickView() {
+            return Boolean(GM_getValue('linuxdoClickTitleQuickView', DEFAULT_SETTINGS.linuxdoClickTitleQuickView));
+        },
+        set linuxdoClickTitleQuickView(value) {
+            updateSetting('linuxdoClickTitleQuickView', value);
+        },
+        get linuxdoQuickViewModalWidth() {
+            return String(normalizeModalWidthPercent(GM_getValue('linuxdoQuickViewModalWidth', DEFAULT_SETTINGS.linuxdoQuickViewModalWidth), DEFAULT_MODAL_WIDTH_PERCENT));
+        },
+        set linuxdoQuickViewModalWidth(value) {
+            updateSetting('linuxdoQuickViewModalWidth', value);
         },
         get showBackToTopButton() {
             return Boolean(GM_getValue('showBackToTopButton', DEFAULT_SETTINGS.showBackToTopButton));
@@ -2146,6 +2397,12 @@ function removeListItemQuickButton(li) {
         },
         set v2exShowBackToTopButton(value) {
             updateSetting('v2exShowBackToTopButton', value);
+        },
+        get linuxdoShowBackToTopButton() {
+            return Boolean(GM_getValue('linuxdoShowBackToTopButton', DEFAULT_SETTINGS.linuxdoShowBackToTopButton));
+        },
+        set linuxdoShowBackToTopButton(value) {
+            updateSetting('linuxdoShowBackToTopButton', value);
         },
         get v2exChannelFilterEnabled() {
             return Boolean(GM_getValue('v2exChannelFilterEnabled', DEFAULT_SETTINGS.v2exChannelFilterEnabled));
@@ -2248,6 +2505,18 @@ function removeListItemQuickButton(li) {
                             </label>
                             <label class="settings-item">
                                 <div class="settings-copy">
+                                    <span class="settings-name">预览弹窗宽度</span>
+                                    <span class="settings-description">预览弹窗宽度</span>
+                                </div>
+                                <select class="settings-input" data-setting="quickViewModalWidth" style="width: 90px; flex: 0 0 90px;">
+                                    <option value="60">60%</option>
+                                    <option value="70">70%</option>
+                                    <option value="80">80%</option>
+                                    <option value="90">90%</option>
+                                </select>
+                            </label>
+                            <label class="settings-item">
+                                <div class="settings-copy">
                                     <span class="settings-name">通知快速查看</span>
                                     <span class="settings-description">开启后点击通知入口会在弹框内查看；关闭后按论坛默认方式打开通知页。</span>
                                 </div>
@@ -2286,6 +2555,18 @@ function removeListItemQuickButton(li) {
                             </label>
                             <label class="settings-item">
                                 <div class="settings-copy">
+                                    <span class="settings-name">预览弹窗宽度</span>
+                                    <span class="settings-description">预览弹窗宽度</span>
+                                </div>
+                                <select class="settings-input" data-setting="middlefunQuickViewModalWidth" style="width: 90px; flex: 0 0 90px;">
+                                    <option value="60">60%</option>
+                                    <option value="70">70%</option>
+                                    <option value="80">80%</option>
+                                    <option value="90">90%</option>
+                                </select>
+                            </label>
+                            <label class="settings-item">
+                                <div class="settings-copy">
                                     <span class="settings-name">返回顶部按钮</span>
                                     <span class="settings-description">开启后滚动页面会显示返回顶部按钮；关闭后不再显示。</span>
                                 </div>
@@ -2311,6 +2592,18 @@ function removeListItemQuickButton(li) {
                                     <input type="checkbox" data-setting="v2exClickTitleQuickView">
                                     <span class="settings-slider"></span>
                                 </span>
+                            </label>
+                            <label class="settings-item">
+                                <div class="settings-copy">
+                                    <span class="settings-name">预览弹窗宽度</span>
+                                    <span class="settings-description">预览弹窗宽度</span>
+                                </div>
+                                <select class="settings-input" data-setting="v2exQuickViewModalWidth" style="width: 90px; flex: 0 0 90px;">
+                                    <option value="60">60%</option>
+                                    <option value="70">70%</option>
+                                    <option value="80">80%</option>
+                                    <option value="90">90%</option>
+                                </select>
                             </label>
                             <label class="settings-item">
                                 <div class="settings-copy">
@@ -2358,6 +2651,46 @@ function removeListItemQuickButton(li) {
                                     </select>
                                 </div>
                             </div>
+                        </div>
+                    </section>
+                    <section class="settings-group" data-site-group="linuxdo">
+                        <button class="settings-group-toggle" type="button" data-group-toggle="linuxdo" aria-expanded="false">
+                            <span class="settings-group-title">linux.do</span>
+                            <span class="settings-group-chevron">▾</span>
+                        </button>
+                        <div class="settings-group-list">
+                            <label class="settings-item">
+                                <div class="settings-copy">
+                                    <span class="settings-name">点击帖子标题快速查看</span>
+                                    <span class="settings-description">开启后点击标题直接弹出预览</span>
+                                </div>
+                                <span class="settings-switch">
+                                    <input type="checkbox" data-setting="linuxdoClickTitleQuickView">
+                                    <span class="settings-slider"></span>
+                                </span>
+                            </label>
+                            <label class="settings-item">
+                                <div class="settings-copy">
+                                    <span class="settings-name">预览弹窗宽度</span>
+                                    <span class="settings-description">预览弹窗宽度</span>
+                                </div>
+                                <select class="settings-input" data-setting="linuxdoQuickViewModalWidth" style="width: 90px; flex: 0 0 90px;">
+                                    <option value="60">60%</option>
+                                    <option value="70">70%</option>
+                                    <option value="80">80%</option>
+                                    <option value="90">90%</option>
+                                </select>
+                            </label>
+                            <label class="settings-item">
+                                <div class="settings-copy">
+                                    <span class="settings-name">返回顶部按钮</span>
+                                    <span class="settings-description">开启后滚动页面会显示返回顶部按钮；关闭后不再显示。</span>
+                                </div>
+                                <span class="settings-switch">
+                                    <input type="checkbox" data-setting="linuxdoShowBackToTopButton">
+                                    <span class="settings-slider"></span>
+                                </span>
+                            </label>
                         </div>
                     </section>
                 </div>
@@ -2411,7 +2744,9 @@ function removeListItemQuickButton(li) {
         }
 
         modal.querySelectorAll('[data-setting]').forEach(control => {
-            const eventName = control.type === 'checkbox' ? 'change' : 'input';
+            const isCheckbox = control.type === 'checkbox';
+            const isSelect = control.tagName && control.tagName.toLowerCase() === 'select';
+            const eventName = (isCheckbox || isSelect) ? 'change' : 'input';
             control.addEventListener(eventName, event => {
                 const currentControl = event.currentTarget;
                 const nextValue = currentControl.type === 'checkbox' ? currentControl.checked : currentControl.value;
@@ -2563,11 +2898,19 @@ function removeListItemQuickButton(li) {
             applyV2exTopicVisibility(topicLink);
         });
     }
+    function processLinuxDoTopicLinks() {
+        const topicLinks = document.querySelectorAll('.topic-list a[href^="/t/"], .topic-list a[href^="https://linux.do/t/"], .topic-list a[href^="https://www.linux.do/t/"], a.title.raw-link.raw-topic-link[href^="/t/"], a.title.raw-link.raw-topic-link[href^="https://linux.do/t/"], a.title.raw-link.raw-topic-link[href^="https://www.linux.do/t/"]');
+        topicLinks.forEach(topicLink => {
+            if (!isLinuxDoTopicUrl(topicLink.href)) return;
+            updateTitleLinkStyle(topicLink);
+        });
+    }
     function processAllPostItems() {
         const processorBySiteKey = {
             '2libra': process2LibraPostItems,
             'middlefun': process2LibraPostItems,
-            'v2ex': processV2exTopicLinks
+            'v2ex': processV2exTopicLinks,
+            'linuxdo': processLinuxDoTopicLinks
         };
         const processor = processorBySiteKey[getCurrentSiteKey()] || process2LibraPostItems;
         processor();
@@ -2631,6 +2974,37 @@ function removeListItemQuickButton(li) {
     postListObserver.observe(document.body, { childList: true, subtree: true });
 
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
