@@ -1,8 +1,8 @@
-# Changelog
+# 更新日志
 
-All notable changes to this project will be documented in this file.
+本文档记录项目的所有重要变更。
 
 ## [1.10.1] - 2026-03-11
-### Changed
-- Increased modal z-index to 1100+ to avoid overlap issues on linux.do.
-- Added global Escape key handling so active modals can be closed consistently, including when focus is inside modal iframe content.
+### 已变更
+- 将弹窗层级（z-index）提升到 1100+，避免在 linux.do 上被页面元素覆盖。
+- 新增全局 `Esc` 关闭弹窗能力：无论焦点是否在弹窗 iframe 内，都可通过 `Esc` 关闭当前弹窗。
