@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ForumMate 论坛增强助手
 // @namespace    http://tampermonkey.net/
-// @version      1.10.0
+// @version      1.10.1
 // @description  ForumMate 论坛增强助手：当前支持 2libra.com、middlefun.com、v2ex.com、linux.do 的帖子快速查看与筛选
 // @author       twocold0451
 // @homepage     https://github.com/twocold0451/forum-mate
@@ -283,6 +283,8 @@
     document.documentElement.classList.add(FORUMMATE_SITE_CLASS);
 
     const TOP_BUTTON_HORIZONTAL_OFFSET = 12;
+    const MODAL_Z_INDEX_BASE = 1100;
+    const FRAME_ESCAPE_HANDLER_PROP = '__forummateEscapeHandler';
 
     function isEmbeddedFrame() {
         try {
@@ -602,7 +604,7 @@
             width: 100vw;
             height: 100vh;
             background: rgba(0, 0, 0, 0.5);
-            z-index: 900;
+            z-index: ${MODAL_Z_INDEX_BASE};
             display: flex;
             justify-content: center;
             align-items: center;
@@ -772,7 +774,7 @@
             position: fixed;
             right: 24px;
             bottom: 24px;
-            z-index: 899;
+            z-index: ${MODAL_Z_INDEX_BASE - 1};
             height: 48px;
             padding: 0 16px;
             border-radius: 16px;
@@ -807,7 +809,7 @@
         #${CONFIG.settingsModalId} {
             position: fixed;
             inset: 0;
-            z-index: 902;
+            z-index: ${MODAL_Z_INDEX_BASE + 2};
             display: flex;
             justify-content: center;
             align-items: center;
@@ -1133,7 +1135,7 @@
             width: 100vw;
             height: 100vh;
             background: rgba(0, 0, 0, 0.5);
-            z-index: 901;
+            z-index: ${MODAL_Z_INDEX_BASE + 1};
             display: flex;
             justify-content: center;
             align-items: center;
@@ -1260,6 +1262,43 @@
         doc.body.style.setProperty('overflow-y', 'auto', 'important');
         doc.body.style.setProperty('overflow-x', 'hidden', 'important');
     }
+    function bindEscapeKeyForIframe(iframe, closeHandler) {
+        if (!iframe || typeof closeHandler !== 'function') return;
+
+        try {
+            const iframeWindow = iframe.contentWindow;
+            if (!iframeWindow || typeof iframeWindow.addEventListener !== 'function') return;
+
+            unbindEscapeKeyForIframe(iframe);
+            const handleEscape = event => {
+                if (event.key !== 'Escape') return;
+                event.preventDefault();
+                event.stopPropagation();
+                closeHandler();
+            };
+
+            iframeWindow.addEventListener('keydown', handleEscape, true);
+            iframe[FRAME_ESCAPE_HANDLER_PROP] = handleEscape;
+        } catch (error) {
+            // Ignore cross-origin iframe access errors.
+        }
+    }
+    function unbindEscapeKeyForIframe(iframe) {
+        if (!iframe) return;
+        const existingHandler = iframe[FRAME_ESCAPE_HANDLER_PROP];
+        if (!existingHandler) return;
+
+        try {
+            const iframeWindow = iframe.contentWindow;
+            if (iframeWindow && typeof iframeWindow.removeEventListener === 'function') {
+                iframeWindow.removeEventListener('keydown', existingHandler, true);
+            }
+        } catch (error) {
+            // Ignore cleanup errors on iframe teardown.
+        }
+
+        delete iframe[FRAME_ESCAPE_HANDLER_PROP];
+    }
     function openModal(url, title) {
         createModal();
         const modal = document.getElementById(CONFIG.modalId);
@@ -1302,6 +1341,7 @@
         if (loadingEl) loadingEl.style.display = 'flex';
         iframe.style.backgroundColor = bg;
         iframe.style.opacity = '0';
+        unbindEscapeKeyForIframe(iframe);
 
         iframe.src = url;
         titleEl.textContent = title || '快速查看';
@@ -1315,6 +1355,7 @@
         syncBodyScrollLock();
 
         iframe.onload = () => {
+            bindEscapeKeyForIframe(iframe, closeModal);
             try {
                 const doc = iframe.contentDocument;
                 const css = getQuickPreviewFrameCss(url, bg);
@@ -1411,6 +1452,7 @@
         const iframe = document.getElementById(CONFIG.iframeId);
         if (modal) {
             modal.classList.remove('active');
+            unbindEscapeKeyForIframe(iframe);
             iframe.src = '';
             syncBodyScrollLock();
         }
@@ -2072,6 +2114,7 @@ function removeListItemQuickButton(li) {
 
         iframe.style.background = bg;
         iframe.style.opacity = '0';
+        unbindEscapeKeyForIframe(iframe);
 
         // Show a random loading animation
         const { animation, text } = getRandomLoadingContent();
@@ -2089,6 +2132,7 @@ function removeListItemQuickButton(li) {
         syncBodyScrollLock();
 
         iframe.onload = () => {
+            bindEscapeKeyForIframe(iframe, closeNotificationsModal);
             try {
                 const doc = iframe.contentDocument;
                 const css = get2LibraNotificationsFrameCss(bg);
@@ -2129,6 +2173,7 @@ function removeListItemQuickButton(li) {
         if (modal) {
             modal.classList.remove('active');
             const iframe = modal.querySelector('iframe');
+            unbindEscapeKeyForIframe(iframe);
             iframe.src = '';
             syncBodyScrollLock();
         }
@@ -2800,26 +2845,33 @@ function removeListItemQuickButton(li) {
         });
     }
 
-    document.addEventListener('keydown', event => {
+    function handleGlobalEscapeKey(event) {
         if (event.key !== 'Escape') return;
 
         const settingsModal = document.getElementById(CONFIG.settingsModalId);
         if (settingsModal && settingsModal.classList.contains('active')) {
+            event.preventDefault();
+            event.stopPropagation();
             closeSettingsModal();
             return;
         }
 
         const notificationsModal = document.getElementById(NOTIFICATIONS_MODAL_ID);
         if (notificationsModal && notificationsModal.classList.contains('active')) {
+            event.preventDefault();
+            event.stopPropagation();
             closeNotificationsModal();
             return;
         }
 
         const quickViewModal = document.getElementById(CONFIG.modalId);
         if (quickViewModal && quickViewModal.classList.contains('active')) {
+            event.preventDefault();
+            event.stopPropagation();
             closeModal();
         }
-    });
+    }
+    document.addEventListener('keydown', handleGlobalEscapeKey, true);
 
     // 鍏ㄥ眬鎵弿骞跺鐞嗘墍鏈夊笘瀛愰」
     function process2LibraPostItems() {
