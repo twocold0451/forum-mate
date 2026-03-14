@@ -1359,11 +1359,17 @@
             if (previewSiteKey === 'linuxdo') {
                 const removeLinuxDoSidebarWrapper = () => {
                     doc.querySelectorAll('.sidebar-wrapper').forEach(sidebarWrapper => {
+                        if (sidebarWrapper.querySelector('.topic-map')) {
+                            return;
+                        }
+
                         const parentElement = sidebarWrapper.parentElement;
                         const parentClassName = parentElement && typeof parentElement.className === 'string'
                             ? parentElement.className
                             : '';
-                        const shouldRemoveParent = parentElement && /sidebar-(container|column)|\bsidebar\b/i.test(parentClassName);
+                        const shouldRemoveParent = parentElement
+                            && /sidebar-(container|column)|\bsidebar\b/i.test(parentClassName)
+                            && !parentElement.querySelector('.topic-map');
 
                         if (shouldRemoveParent) {
                             parentElement.remove();
@@ -1372,14 +1378,13 @@
                         }
                     });
 
-                    doc.body.classList.remove('has-sidebar-page');
-                    doc.documentElement.classList.remove('has-sidebar-page');
-
                     const mainOutletWrapper = doc.querySelector('#main-outlet-wrapper');
                     if (mainOutletWrapper) {
-                        mainOutletWrapper.style.setProperty('grid-template-columns', 'minmax(0, 1fr)', 'important');
-                        mainOutletWrapper.style.setProperty('gap', '0', 'important');
+                        mainOutletWrapper.style.setProperty('grid-template-areas', '"content timeline" "below-content timeline"', 'important');
+                        mainOutletWrapper.style.setProperty('grid-template-columns', 'minmax(0, 1fr) 220px', 'important');
+                        mainOutletWrapper.style.setProperty('gap', '16px', 'important');
                         mainOutletWrapper.style.setProperty('padding-left', '0', 'important');
+                        mainOutletWrapper.style.setProperty('align-items', 'start', 'important');
                     }
                 };
 
@@ -1660,11 +1665,9 @@
             .d-header,
             .d-header-wrap,
             .navigation-container,
-            .topic-map,
             .post-notice,
             .topic-above-posts,
             .topic-below-posts-outlet,
-            .topic-footer-main-buttons,
             .footer-nav,
             .list-controls,
             .sidebar-wrapper,
@@ -1675,17 +1678,16 @@
             body { min-width: 0 !important; }
             body.has-sidebar-page {
                 --d-sidebar-width: 0 !important;
-                --d-main-content-gap: 0 !important;
+                --d-main-content-gap: 16px !important;
             }
             #main-outlet-wrapper,
             body.has-sidebar-page #main-outlet-wrapper {
-                grid-template-areas:
-                    "content"
-                    "below-content" !important;
-                grid-template-columns: minmax(0, 1fr) !important;
+                grid-template-areas: "content timeline" "below-content timeline" !important;
+                grid-template-columns: minmax(0, 1fr) 220px !important;
                 grid-template-rows: 1fr auto !important;
-                gap: 0 !important;
+                gap: 16px !important;
                 padding-left: 0 !important;
+                align-items: start !important;
             }
             #main-outlet {
                 width: min(1120px, calc(100vw - 32px)) !important;
@@ -1693,12 +1695,39 @@
                 margin: 0 auto !important;
                 padding: 16px 0 24px !important;
             }
+            .topic-map {
+                display: block !important;
+                grid-area: timeline !important;
+                position: sticky !important;
+                top: 16px !important;
+                align-self: start !important;
+                max-height: calc(100vh - 32px) !important;
+                overflow: auto !important;
+            }
+            .topic-footer-main-buttons {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+            }
             .topic-list,
             .topic-list-body,
             .topic-post,
-            .topic-body {
+            .topic-body,
+            .topic-area,
+            .posts-wrapper {
                 max-width: 100% !important;
                 box-sizing: border-box !important;
+            }
+            @media (max-width: 900px) {
+                #main-outlet-wrapper,
+                body.has-sidebar-page #main-outlet-wrapper {
+                    grid-template-areas: "content" "timeline" "below-content" !important;
+                    grid-template-columns: minmax(0, 1fr) !important;
+                }
+                .topic-map {
+                    position: static !important;
+                    max-height: none !important;
+                }
             }
         `;
     }
