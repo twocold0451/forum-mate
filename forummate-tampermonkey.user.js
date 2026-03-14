@@ -1300,13 +1300,27 @@
         delete iframe[FRAME_ESCAPE_HANDLER_PROP];
     }
 
+    function isQuickPreviewFrameReady(doc, previewSiteKey, previewSiteConfig) {
+        if (!doc || !doc.head || !doc.body) return false;
+
+        if (previewSiteKey === '2libra') {
+            return Boolean(doc.querySelector('[data-main-left="true"]'));
+        }
+
+        if (previewSiteKey === 'middlefun' && previewSiteConfig && previewSiteConfig.features && previewSiteConfig.features.previewUse2LibraLikeScrollMode) {
+            return Boolean(doc.querySelector('main, [role="main"], .container'));
+        }
+
+        return true;
+    }
+
     function initializeQuickPreviewFrame(iframe, url, bg, previewSiteKey, previewSiteConfig, loadingEl) {
         if (!iframe || iframe.dataset.forummatePreviewInitialized === 'true') return true;
 
         try {
             const doc = iframe.contentDocument;
             const win = iframe.contentWindow;
-            if (!doc || !win || !doc.head || !doc.body) return false;
+            if (!isQuickPreviewFrameReady(doc, previewSiteKey, previewSiteConfig) || !win) return false;
 
             const styleId = 'forummate-quick-preview-style';
             let style = doc.getElementById(styleId);
@@ -1491,17 +1505,22 @@
                 clearInterval(iframe.__forummateInitTimer);
                 delete iframe.__forummateInitTimer;
             }
-        }, 50);
+        }, 80);
         window.setTimeout(() => {
-            if (iframe.__forummateInitTimer) {
+            if (!iframe.__forummateInitTimer) return;
+
+            if (tryInitialize()) {
                 clearInterval(iframe.__forummateInitTimer);
                 delete iframe.__forummateInitTimer;
-                if (!tryInitialize()) {
-                    if (loadingEl) loadingEl.style.display = 'none';
-                    iframe.style.opacity = '1';
-                }
+                return;
             }
-        }, 4000);
+
+            // 超时兜底：避免一直转圈，但仍优先走已注入样式后的展示。
+            if (loadingEl) loadingEl.style.display = 'none';
+            iframe.style.opacity = '1';
+            clearInterval(iframe.__forummateInitTimer);
+            delete iframe.__forummateInitTimer;
+        }, 15000);
 
         iframe.src = url;
         titleEl.textContent = title || '快速查看';
