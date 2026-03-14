@@ -1299,6 +1299,122 @@
 
         delete iframe[FRAME_ESCAPE_HANDLER_PROP];
     }
+
+    function initializeQuickPreviewFrame(iframe, url, bg, previewSiteKey, previewSiteConfig, loadingEl) {
+        if (!iframe || iframe.dataset.forummatePreviewInitialized === 'true') return true;
+
+        try {
+            const doc = iframe.contentDocument;
+            const win = iframe.contentWindow;
+            if (!doc || !win || !doc.head || !doc.body) return false;
+
+            const styleId = 'forummate-quick-preview-style';
+            let style = doc.getElementById(styleId);
+            if (!style) {
+                const css = getQuickPreviewFrameCss(url, bg);
+                style = doc.createElement('style');
+                style.id = styleId;
+                style.textContent = css;
+                doc.head.appendChild(style);
+            }
+
+            if (previewSiteConfig && previewSiteConfig.features && previewSiteConfig.features.previewHidePromotions) {
+                const hidePreviewPromoCards = () => {
+                    doc.querySelectorAll('img[src*="/promotion/"]').forEach(image => {
+                        const promoCard = image.closest('.card.card-border.cursor-pointer') || image.closest('[role="link"][tabindex="0"]')?.closest('.card.card-border');
+                        if (promoCard) {
+                            promoCard.style.display = 'none';
+                        }
+                    });
+                };
+
+                hidePreviewPromoCards();
+                if (!iframe.__forummatePreviewPromoObserver) {
+                    const previewPromoObserver = new MutationObserver(() => {
+                        hidePreviewPromoCards();
+                    });
+                    previewPromoObserver.observe(doc.body, { childList: true, subtree: true });
+                    iframe.__forummatePreviewPromoObserver = previewPromoObserver;
+                }
+            }
+
+            if (previewSiteConfig && previewSiteConfig.features && previewSiteConfig.features.previewUse2LibraLikeScrollMode) {
+                apply2LibraLikePreviewScrollMode(doc);
+            }
+
+            if (previewSiteKey === 'linuxdo') {
+                const removeLinuxDoSidebarWrapper = () => {
+                    doc.querySelectorAll('.sidebar-wrapper').forEach(sidebarWrapper => {
+                        const parentElement = sidebarWrapper.parentElement;
+                        const parentClassName = parentElement && typeof parentElement.className === 'string'
+                            ? parentElement.className
+                            : '';
+                        const shouldRemoveParent = parentElement && /sidebar-(container|column)|\bsidebar\b/i.test(parentClassName);
+
+                        if (shouldRemoveParent) {
+                            parentElement.remove();
+                        } else {
+                            sidebarWrapper.remove();
+                        }
+                    });
+
+                    doc.body.classList.remove('has-sidebar-page');
+                    doc.documentElement.classList.remove('has-sidebar-page');
+
+                    const mainOutletWrapper = doc.querySelector('#main-outlet-wrapper');
+                    if (mainOutletWrapper) {
+                        mainOutletWrapper.style.setProperty('grid-template-columns', 'minmax(0, 1fr)', 'important');
+                        mainOutletWrapper.style.setProperty('gap', '0', 'important');
+                        mainOutletWrapper.style.setProperty('padding-left', '0', 'important');
+                    }
+                };
+
+                removeLinuxDoSidebarWrapper();
+                if (!iframe.__forummateLinuxDoSidebarObserver) {
+                    const linuxDoSidebarObserver = new MutationObserver(removeLinuxDoSidebarWrapper);
+                    linuxDoSidebarObserver.observe(doc.body, { childList: true, subtree: true });
+                    iframe.__forummateLinuxDoSidebarObserver = linuxDoSidebarObserver;
+                }
+            }
+
+            function scrollToTop() {
+                console.log('ForumMate Script: Loaded and running...');
+                const mainContent = doc.querySelector('[data-main-left="true"]');
+                if (mainContent) {
+                    mainContent.scrollTop = 0;
+                } else {
+                    doc.documentElement.scrollTop = 0;
+                }
+            }
+
+            if (!win.__forummateHistoryPatched) {
+                const originalPushState = win.history.pushState;
+                win.history.pushState = function(state, title, nextUrl) {
+                    console.log('ForumMate Script: Loaded and running...');
+                    originalPushState.apply(this, arguments);
+                    scrollToTop();
+                };
+
+                const originalReplaceState = win.history.replaceState;
+                win.history.replaceState = function(state, title, nextUrl) {
+                    originalReplaceState.apply(this, arguments);
+                    scrollToTop();
+                };
+
+                win.addEventListener('popstate', scrollToTop, true);
+                win.__forummateHistoryPatched = true;
+            }
+
+            bindEscapeKeyForIframe(iframe, closeModal);
+            iframe.dataset.forummatePreviewInitialized = 'true';
+            if (loadingEl) loadingEl.style.display = 'none';
+            iframe.style.opacity = '1';
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
     function openModal(url, title) {
         createModal();
         const modal = document.getElementById(CONFIG.modalId);
@@ -1341,7 +1457,51 @@
         if (loadingEl) loadingEl.style.display = 'flex';
         iframe.style.backgroundColor = bg;
         iframe.style.opacity = '0';
+        iframe.dataset.forummatePreviewInitialized = 'false';
         unbindEscapeKeyForIframe(iframe);
+
+        if (iframe.__forummatePreviewPromoObserver) {
+            iframe.__forummatePreviewPromoObserver.disconnect();
+            delete iframe.__forummatePreviewPromoObserver;
+        }
+        if (iframe.__forummateLinuxDoSidebarObserver) {
+            iframe.__forummateLinuxDoSidebarObserver.disconnect();
+            delete iframe.__forummateLinuxDoSidebarObserver;
+        }
+        if (iframe.__forummateInitTimer) {
+            clearInterval(iframe.__forummateInitTimer);
+            delete iframe.__forummateInitTimer;
+        }
+        if (iframe.__forummateDomReadyHandler) {
+            iframe.removeEventListener('load', iframe.__forummateDomReadyHandler, true);
+            delete iframe.__forummateDomReadyHandler;
+        }
+
+        const tryInitialize = () => initializeQuickPreviewFrame(iframe, url, bg, previewSiteKey, previewSiteConfig, loadingEl);
+        iframe.__forummateDomReadyHandler = () => {
+            if (tryInitialize() && iframe.__forummateInitTimer) {
+                clearInterval(iframe.__forummateInitTimer);
+                delete iframe.__forummateInitTimer;
+            }
+        };
+
+        iframe.addEventListener('load', iframe.__forummateDomReadyHandler, true);
+        iframe.__forummateInitTimer = window.setInterval(() => {
+            if (tryInitialize()) {
+                clearInterval(iframe.__forummateInitTimer);
+                delete iframe.__forummateInitTimer;
+            }
+        }, 50);
+        window.setTimeout(() => {
+            if (iframe.__forummateInitTimer) {
+                clearInterval(iframe.__forummateInitTimer);
+                delete iframe.__forummateInitTimer;
+                if (!tryInitialize()) {
+                    if (loadingEl) loadingEl.style.display = 'none';
+                    iframe.style.opacity = '1';
+                }
+            }
+        }, 4000);
 
         iframe.src = url;
         titleEl.textContent = title || '快速查看';
@@ -1353,98 +1513,6 @@
 
         modal.classList.add('active');
         syncBodyScrollLock();
-
-        iframe.onload = () => {
-            bindEscapeKeyForIframe(iframe, closeModal);
-            try {
-                const doc = iframe.contentDocument;
-                const css = getQuickPreviewFrameCss(url, bg);
-                const style = doc.createElement('style');
-                style.textContent = css;
-                doc.head.appendChild(style);
-
-                if (previewSiteConfig && previewSiteConfig.features && previewSiteConfig.features.previewHidePromotions) {
-                    const hidePreviewPromoCards = () => {
-                        doc.querySelectorAll('img[src*="/promotion/"]').forEach(image => {
-                            const promoCard = image.closest('.card.card-border.cursor-pointer') || image.closest('[role="link"][tabindex="0"]')?.closest('.card.card-border');
-                            if (promoCard) {
-                                promoCard.style.display = 'none';
-                            }
-                        });
-                    };
-
-                    hidePreviewPromoCards();
-                    const previewPromoObserver = new MutationObserver(() => {
-                        hidePreviewPromoCards();
-                    });
-                    previewPromoObserver.observe(doc.body, { childList: true, subtree: true });
-                }
-
-                if (previewSiteConfig && previewSiteConfig.features && previewSiteConfig.features.previewUse2LibraLikeScrollMode) {
-                    apply2LibraLikePreviewScrollMode(doc);
-                }
-                if (previewSiteKey === 'linuxdo') {
-                    const removeLinuxDoSidebarWrapper = () => {
-                        doc.querySelectorAll('.sidebar-wrapper').forEach(sidebarWrapper => {
-                            const parentElement = sidebarWrapper.parentElement;
-                            const parentClassName = parentElement && typeof parentElement.className === 'string'
-                                ? parentElement.className
-                                : '';
-                            const shouldRemoveParent = parentElement && /sidebar-(container|column)|\bsidebar\b/i.test(parentClassName);
-
-                            if (shouldRemoveParent) {
-                                parentElement.remove();
-                            } else {
-                                sidebarWrapper.remove();
-                            }
-                        });
-
-                        doc.body.classList.remove('has-sidebar-page');
-                        doc.documentElement.classList.remove('has-sidebar-page');
-
-                        const mainOutletWrapper = doc.querySelector('#main-outlet-wrapper');
-                        if (mainOutletWrapper) {
-                            mainOutletWrapper.style.setProperty('grid-template-columns', 'minmax(0, 1fr)', 'important');
-                            mainOutletWrapper.style.setProperty('gap', '0', 'important');
-                            mainOutletWrapper.style.setProperty('padding-left', '0', 'important');
-                        }
-                    };
-
-                    removeLinuxDoSidebarWrapper();
-                    const linuxDoSidebarObserver = new MutationObserver(removeLinuxDoSidebarWrapper);
-                    linuxDoSidebarObserver.observe(doc.body, { childList: true, subtree: true });
-                }
-
-                function scrollToTop() {
-                    console.log('ForumMate Script: Loaded and running...');
-                    const mainContent = doc.querySelector('[data-main-left="true"]');
-                    if (mainContent) {
-                        mainContent.scrollTop = 0;
-                    } else {
-                        doc.documentElement.scrollTop = 0;
-                    }
-                }
-
-                // Watch URL changes and keep the preview scrolled to the top
-                const win = iframe.contentWindow;
-
-                // Patch pushState and replaceState inside the iframe
-                const originalPushState = win.history.pushState;
-                win.history.pushState = function(state, title, url) {
-                    console.log('ForumMate Script: Loaded and running...');
-                    originalPushState.apply(this, arguments);
-                    scrollToTop();
-                };
-
-                // Hide the loading state after styles are injected
-                if (loadingEl) loadingEl.style.display = 'none';
-                iframe.style.opacity = '1';
-            } catch (e) {
-                // Fail open so the iframe still becomes visible on errors
-                if (loadingEl) loadingEl.style.display = 'none';
-                iframe.style.opacity = '1';
-            }
-        };
     }
 
     function closeModal() {
@@ -1453,6 +1521,23 @@
         if (modal) {
             modal.classList.remove('active');
             unbindEscapeKeyForIframe(iframe);
+            if (iframe.__forummatePreviewPromoObserver) {
+                iframe.__forummatePreviewPromoObserver.disconnect();
+                delete iframe.__forummatePreviewPromoObserver;
+            }
+            if (iframe.__forummateLinuxDoSidebarObserver) {
+                iframe.__forummateLinuxDoSidebarObserver.disconnect();
+                delete iframe.__forummateLinuxDoSidebarObserver;
+            }
+            if (iframe.__forummateInitTimer) {
+                clearInterval(iframe.__forummateInitTimer);
+                delete iframe.__forummateInitTimer;
+            }
+            if (iframe.__forummateDomReadyHandler) {
+                iframe.removeEventListener('load', iframe.__forummateDomReadyHandler, true);
+                delete iframe.__forummateDomReadyHandler;
+            }
+            iframe.dataset.forummatePreviewInitialized = 'false';
             iframe.src = '';
             syncBodyScrollLock();
         }
